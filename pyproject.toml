@@ -5,7 +5,7 @@ description = "コードを書いて実行・自動採点・AIフィードバッ
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "anthropic>=1.15.0",
+    "google-genai>=2.31.0",
     "pydantic>=2.14.1",
     "pytest>=9.1.1",
     "python-dotenv>=1.2.4",
