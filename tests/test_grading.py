@@ -115,6 +115,8 @@ def test_exercise_requires_three_hints() -> None:
         ("Traceback...\nZeroDivisionError: division by zero", "ZeroDivisionError"),
         ("KeyError then ValueError: bad", "ValueError"),
         ("all good", None),
+        # pytest の失敗詳細は最終行の "file:line: 種別" を優先する
+        ("Failed: DID NOT RAISE <class 'ValueError'>\n\ntest_solution.py:9: Failed", "Failed"),
     ],
 )
 def test_detect_error_type(text: str, expected: str | None) -> None:

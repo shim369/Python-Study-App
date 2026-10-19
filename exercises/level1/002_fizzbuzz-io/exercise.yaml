@@ -1,0 +1,124 @@
+id: l1-002-fizzbuzz-io
+title: FizzBuzz(標準入出力)
+level: 1
+topic: control-flow
+kind: write
+grading: io
+description: |
+  ## やること
+  標準入力から整数 `N`(1 ≦ N ≦ 100)を1行読み込み、1 から N までを1行ずつ出力する
+  **プログラム**を書いてください(関数ではなく、スクリプトとして実行されます)。
+
+  - 3 の倍数のときは数の代わりに `Fizz`
+  - 5 の倍数のときは `Buzz`
+  - 3 と 5 両方の倍数のときは `FizzBuzz`
+
+  ## 例
+  入力:
+  ```
+  5
+  ```
+  出力:
+  ```
+  1
+  2
+  Fizz
+  4
+  Buzz
+  ```
+starter_code: |
+  n = int(input())
+
+  # ここに実装
+cases:
+  - name: 1だけ
+    stdin: "1\n"
+    expected_stdout: |
+      1
+  - name: Fizzまで
+    stdin: "3\n"
+    expected_stdout: |
+      1
+      2
+      Fizz
+  - name: Buzzまで
+    stdin: "5\n"
+    expected_stdout: |
+      1
+      2
+      Fizz
+      4
+      Buzz
+  - name: FizzBuzzまで
+    stdin: "15\n"
+    expected_stdout: |
+      1
+      2
+      Fizz
+      4
+      Buzz
+      Fizz
+      7
+      8
+      Fizz
+      Buzz
+      11
+      Fizz
+      13
+      14
+      FizzBuzz
+  - name: 30まで
+    stdin: "30\n"
+    expected_stdout: |
+      1
+      2
+      Fizz
+      4
+      Buzz
+      Fizz
+      7
+      8
+      Fizz
+      Buzz
+      11
+      Fizz
+      13
+      14
+      FizzBuzz
+      16
+      17
+      Fizz
+      19
+      Buzz
+      Fizz
+      22
+      23
+      Fizz
+      Buzz
+      26
+      Fizz
+      28
+      29
+      FizzBuzz
+hints:
+  - 「1 から N まで繰り返す」には range を使います。終わりの値が含まれるかどうかに注意しましょう。
+  - 割り切れるかは剰余演算子 % で判定できます。条件を判定する**順番**が大事です。
+  - 手順:for i in range(1, n + 1) でループ → 15 の倍数 → 3 の倍数 → 5 の倍数 → それ以外、の順に if / elif / else で分岐して print する。
+solution: |
+  n = int(input())
+
+  for i in range(1, n + 1):
+      if i % 15 == 0:
+          print("FizzBuzz")
+      elif i % 3 == 0:
+          print("Fizz")
+      elif i % 5 == 0:
+          print("Buzz")
+      else:
+          print(i)
+php_note: |
+  PHPの `for ($i = 1; $i <= $n; $i++)` は、Pythonでは `for i in range(1, n + 1):` です。
+  `range` の終わりの値は**含まれない**ので `n + 1` にします。
+  `elseif` ではなく `elif`、波括弧の代わりにインデントでブロックを表します。
+  標準入力は `fgets(STDIN)` の代わりに `input()` で、末尾の改行は自動で除かれます。
+tags: [control-flow, loop, stdin]

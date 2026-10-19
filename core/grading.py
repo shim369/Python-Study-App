@@ -12,8 +12,15 @@ MAX_CODE_CHARS = 20_000
 _EXCEPTION_RE = re.compile(r"\b([A-Z][A-Za-z]*(?:Error|Exception|Exit|Interrupt))\b")
 
 
+# pytest の失敗詳細の最終行 "test_solution.py:12: AssertionError" の形式
+_PYTEST_LOCATION_RE = re.compile(r":\d+: (\w+)\s*$")
+
+
 def detect_error_type(text: str) -> str | None:
     """エラーメッセージ中で最後に現れた例外名を返す(トレースバックは最後が原因)。"""
+    location = _PYTEST_LOCATION_RE.search(text)
+    if location:
+        return location.group(1)
     found = _EXCEPTION_RE.findall(text)
     return found[-1] if found else None
 
@@ -51,8 +58,9 @@ def _grade_pytest(exercise: Exercise, code: str, limits: RunLimits) -> GradeResu
     if run.timed_out:
         error_type = "Timeout"
     elif not result.passed:
-        failures = "\n".join(c.details or c.message for c in cases if not c.passed)
-        error_type = detect_error_type(failures or run.stdout + run.stderr)
+        first_failure = next((c for c in cases if not c.passed), None)
+        source = (first_failure.details or first_failure.message) if first_failure else ""
+        error_type = detect_error_type(source or run.stdout + run.stderr)
 
     return GradeResult(
         passed=result.passed,

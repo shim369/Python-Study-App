@@ -1,0 +1,54 @@
+id: l2-001-chunked
+title: チャンク分割ジェネレータ
+level: 2
+topic: generator
+kind: write
+grading: pytest
+description: |
+  ## やること
+  イテラブル `iterable` を `size` 個ずつのリストに区切って**順に生成する**ジェネレータ関数
+  `chunked(iterable, size)` を実装してください。
+
+  ## ルール
+  - 最後のチャンクは `size` 個に満たなくてもよい(余りをそのまま出す)
+  - 空のイテラブルなら何も生成しない
+  - **無限イテレータ**(例: `itertools.count()`)を渡しても、必要な分だけ取り出せること
+    (全体を一度リストにしてはいけない)
+  - `size` が 1 未満なら `ValueError` を送出する(最初の要素を取り出す時点での送出でよい)
+
+  ## 例
+  ```python
+  >>> list(chunked([1, 2, 3, 4, 5], 2))
+  [[1, 2], [3, 4], [5]]
+  ```
+
+  シグネチャの `[T]` は Python 3.12 の型パラメータ構文で、「要素の型 T はそのまま
+  リストの要素の型になる」という意味です(PHPDoc の `@template T` に相当)。
+starter_code: |
+  from collections.abc import Iterable, Iterator
+
+
+  def chunked[T](iterable: Iterable[T], size: int) -> Iterator[list[T]]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - return で一度に返すのではなく、1チャンクできるたびに yield で渡す関数にしましょう。
+  - 引数がリストとは限らないので、まず iter() でイテレータにしてから少しずつ取り出します。itertools モジュールには「先頭から n 個だけ取り出す」関数があります。
+  - 手順:size をチェック → iterator = iter(iterable) → ループで「最大 size 個取り出してリスト化」→ 空リストならループ終了、そうでなければ yield。
+solution: |
+  from collections.abc import Iterable, Iterator
+  from itertools import islice
+
+
+  def chunked[T](iterable: Iterable[T], size: int) -> Iterator[list[T]]:
+      if size < 1:
+          raise ValueError("size は 1 以上にしてください")
+      iterator = iter(iterable)
+      while chunk := list(islice(iterator, size)):
+          yield chunk
+php_note: |
+  PHPの `array_chunk($array, 2)` は配列全体を一度に作りますが、ジェネレータは
+  呼ばれるたびに1チャンクずつ作るので、巨大なファイルや無限の入力にも使えます。
+  PHPにも `yield` があり、考え方は同じです。
+  なお Python 3.12 以降には同様の `itertools.batched`(タプルを返す)が標準で入っています。
+tags: [generator, itertools, typing]

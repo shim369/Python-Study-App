@@ -1,0 +1,44 @@
+id: l1-001-word-frequency
+title: 単語の出現回数
+level: 1
+topic: dict
+kind: write
+grading: pytest
+description: |
+  ## やること
+  文字列 `text` に含まれる単語ごとの出現回数を数え、`{単語: 回数}` の辞書で返す
+  関数 `word_frequency(text)` を実装してください。
+
+  ## ルール
+  - 単語は空白(スペース・タブ・改行)で区切られたもの
+  - 大文字・小文字は区別しない(キーは**小文字**にする)
+  - 各単語の**前後**についた記号 `.` `,` `!` `?` は取り除く(`"hello!"` → `"hello"`)
+  - 記号を取り除いた結果が空になったものは数えない
+  - `text` が空文字列なら空の辞書 `{}` を返す
+
+  ## 例
+  ```python
+  >>> word_frequency("The cat and the hat.")
+  {'the': 2, 'cat': 1, 'and': 1, 'hat': 1}
+  ```
+starter_code: |
+  def word_frequency(text: str) -> dict[str, int]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - 単語に分ける → 1語ずつ整える → 数える、の3ステップに分けて考えましょう。空白での分割は引数なしの split が得意です。
+  - 前後の記号除去には str.strip に「取り除きたい文字の集合」を渡せます。数える部分は dict.get(key, 0) を使うか、collections モジュールの「数える専用の辞書」を調べてみましょう。
+  - 手順:text.lower().split() でループ → 各語を strip(".,!?") → 空なら continue → 辞書の値を +1。最後に辞書を返す。Counter なら「数える」部分が1行になります。
+solution: |
+  from collections import Counter
+
+
+  def word_frequency(text: str) -> dict[str, int]:
+      words = (word.strip(".,!?") for word in text.lower().split())
+      return dict(Counter(word for word in words if word))
+php_note: |
+  PHPでは `array_count_values(explode(' ', strtolower($text)))` のように書きますが、
+  `explode(' ', ...)` は連続した空白で空要素ができます。Pythonの引数なし `split()` は
+  連続する空白・改行をまとめて区切りとして扱うので、その心配がありません。
+  `trim($word, '.,!?')` に相当するのが `word.strip('.,!?')` です。
+tags: [dict, string, collections]

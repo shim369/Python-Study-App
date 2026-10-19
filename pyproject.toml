@@ -28,6 +28,10 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 
+[tool.ruff.lint.isort]
+# 教材のテストが import する学習者コード(実行時に solution.py として置かれる)
+known-local-folder = ["solution"]
+
 [tool.mypy]
 strict = true
 python_version = "3.12"

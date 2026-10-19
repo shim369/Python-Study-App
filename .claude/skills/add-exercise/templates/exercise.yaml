@@ -1,0 +1,38 @@
+# id: l<レベル>-<3桁連番>-<英小文字とハイフンのslug>。ディレクトリ名は <3桁連番>_<slug>
+id: l1-000-slug
+title: タイトル(20文字程度)
+level: 1            # 1基礎 / 2中級 / 3標準ライブラリ / 4実務
+topic: dict         # 主トピック1つ(ダッシュボードの集計単位)
+kind: write         # write=ゼロから書く / bugfix=壊れたコードを直す
+grading: pytest     # pytest=test_solution.py で採点 / io=標準入出力を比較
+description: |
+  ## やること
+  `function_name(arg)` を実装してください。...
+
+  ## 例
+  ```python
+  >>> function_name(...)
+  ...
+  ```
+
+  ## 条件
+  - 入力の前提(型・範囲・空の場合)を必ず書く
+starter_code: |
+  def function_name(arg: str) -> int:
+      # ここに実装
+      raise NotImplementedError
+# grading: io の場合のみ(test_solution.py は不要)
+# cases:
+#   - name: 基本
+#     stdin: "3\n"
+#     expected_stdout: "6\n"
+hints:
+  - 段階1: 考え方の方向性だけ(使う概念の名前程度)
+  - 段階2: 具体的な道具(関数名・構文)を示す。まだコードは書かない
+  - 段階3: 手順を日本語で。コードの断片は1行まで
+solution: |
+  def function_name(arg: str) -> int:
+      ...
+php_note: |
+  PHPでは `...` と書くところを、Pythonでは `...` と書きます。
+tags: [dict]
