@@ -53,3 +53,8 @@ dev = [
 [tool.coverage.run]
 # 子プロセス内でのみ実行されるため計測できない(動作は tests/test_sandbox.py で検証)
 omit = ["runner/_launcher.py"]
+
+[[tool.mypy.overrides]]
+# streamlit-ace は型情報(py.typed)を提供していない
+module = ["streamlit_ace"]
+ignore_missing_imports = true
