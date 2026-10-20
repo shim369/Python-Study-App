@@ -1,10 +1,13 @@
 """画面のスモークテスト(Streamlit の AppTest でブラウザなしに画面を動かす)。"""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
+import ai.client
 from core.loader import load_all
 
 MAIN_SCRIPT = Path(__file__).resolve().parent.parent / "app" / "main.py"
@@ -18,6 +21,18 @@ def isolated_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     path = tmp_path / "app.db"
     monkeypatch.setenv("STUDY_APP_DB_PATH", str(path))
     return path
+
+
+@pytest.fixture(autouse=True)
+def no_real_ai(monkeypatch: pytest.MonkeyPatch) -> None:
+    """.env に本物のキーがあっても、テストでは Gemini を呼ばない(AI無効の状態から始める)。"""
+    monkeypatch.setenv("GEMINI_API_KEY", "")  # load_dotenv は設定済みの環境変数を上書きしない
+    st.cache_resource.clear()  # AI サービスはプロセス内でキャッシュされるので毎回作り直す
+
+
+class FakeGenerator:
+    def generate(self, system: str, prompt: str) -> str:
+        return "AIの回答です"
 
 
 def start_app() -> AppTest:
@@ -84,3 +99,48 @@ def test_dashboard_shows_progress(app: AppTest) -> None:
     assert app.title[0].value == "ダッシュボード"
     assert app.metric[0].value.startswith("1 /")  # 合格した問題
     assert app.metric[1].value == "1 日"  # 連続学習日数
+
+
+def test_ai_disabled_without_api_key(app: AppTest) -> None:
+    assert not app.exception
+    assert any("GEMINI_API_KEY" in c.value for c in app.caption)
+    assert not any(b.label.startswith("AIヒント") for b in app.button)
+
+
+def test_ai_buttons_follow_practice_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(ai.client, "create_client", FakeGenerator)
+    app = start_app()
+
+    def button(prefix: str) -> Any:
+        return next(b for b in app.button if b.label.startswith(prefix))
+
+    assert button("不合格の原因").disabled  # まだ実行していない
+    assert button("コードレビュー").disabled
+
+    click(app, "AIヒント(1/3)")
+    assert any(e.label == "AIヒント(段階1)" for e in app.expander)
+    assert any(m.value == "AIの回答です" for m in app.markdown)
+    assert button("AIヒント(2/3)")  # 次の段階に進んでいる
+
+    click(app, "▶ 実行")  # 初期コードは不合格
+    assert not button("不合格の原因").disabled
+    button("不合格の原因").click().run()
+    assert any(e.label == "不合格の原因" for e in app.expander)
+
+    app.session_state[EDITOR_KEY] = FIRST.solution
+    click(app, "▶ 実行")
+    assert not button("コードレビュー").disabled
+
+
+def test_selection_is_kept_when_label_changes(app: AppTest) -> None:
+    """実行して ✏️ / ✅ が付いても、選んだ問題のまま操作を続けられる。"""
+    second = load_all().exercises[1]
+    app.sidebar.selectbox[0].select_index(1).run()
+    assert app.title[0].value == second.title
+
+    click(app, "▶ 実行")  # 初期コードで不合格 → ラベルに ✏️ が付く
+    assert app.sidebar.selectbox[0].options[1].startswith("✏️")
+    click(app, "▶ 実行")
+    assert not app.exception
+    assert app.title[0].value == second.title
+    assert any(c.value == "挑戦回数: 2" for c in app.caption)

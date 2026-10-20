@@ -2,6 +2,7 @@
 
 採点や「模範解答をいつ見せるか」のルールは core/ にあり、ここは表示と入力の受け渡しだけ。
 進捗(挑戦回数・ヒント使用数など)は core.progress で SQLite に保存し、再起動後も復元する。
+AI フィードバックは ai/ に任せる。APIキー未設定や API エラーでも、AI 以外はそのまま使える。
 """
 
 import logging
@@ -11,6 +12,8 @@ from collections.abc import Callable
 import streamlit as st
 from streamlit_ace import st_ace
 
+from ai.client import create_client
+from ai.feedback import Feedback, FeedbackService
 from core.grading import grade
 from core.loader import LoadResult, load_all
 from core.models import Exercise, GradeResult
@@ -24,6 +27,16 @@ logger = logging.getLogger(__name__)
 def load_exercises() -> LoadResult:
     """教材の読み込みは重くはないが、再実行(rerun)のたびに読み直さないようキャッシュする。"""
     return load_all()
+
+
+@st.cache_resource
+def get_feedback_service() -> FeedbackService | None:
+    """AI は1プロセスで1つだけ作る(回答のキャッシュをセッションをまたいで共有するため)。
+
+    .env の APIキーを変えた場合は、アプリを再起動すると反映される。
+    """
+    client = create_client()
+    return FeedbackService(client) if client else None
 
 
 def open_store() -> ProgressStore | None:
@@ -88,10 +101,12 @@ def exercise_label(exercise: Exercise, store: ProgressStore | None) -> str:
 
 def select_exercise(exercises: list[Exercise], store: ProgressStore | None) -> Exercise:
     by_id = {ex.id: ex for ex in exercises}
+    # ラベルは先に作っておく(format_func の中で毎回 session_state を引かずに済む)
+    labels = {ex.id: exercise_label(ex, store) for ex in exercises}
     selected_id = st.sidebar.selectbox(
         "問題",
         options=list(by_id),
-        format_func=lambda exercise_id: exercise_label(by_id[exercise_id], store),
+        format_func=labels.__getitem__,
         key="selected_exercise_id",
     )
     return by_id[selected_id]
@@ -172,8 +187,76 @@ def run_grading(
             logger.exception("採点中に予期しないエラー: %s", exercise.id)
             st.error("採点中にアプリ側でエラーが起きました。ターミナルのログを確認してください。")
             return
-    practice.record(result)
+    practice.record(result, code)
     use_db(store, lambda s: s.record_attempt(exercise.id, result))
+    # 問題一覧は採点前に描画済み。✏️ / ✅ の印をすぐ反映するため描き直す
+    st.rerun()
+
+
+def ai_log(exercise: Exercise) -> list[tuple[str, Feedback]]:
+    """この問題で AI に聞いた内容と回答の履歴(画面表示用。セッション中だけ保持)。"""
+    log: list[tuple[str, Feedback]] = st.session_state.setdefault(f"ai_log:{exercise.id}", [])
+    return log
+
+
+def render_ai_assistant(exercise: Exercise, practice: PracticeState, code: str) -> None:
+    st.subheader("🤖 AIアシスタント")
+    service = get_feedback_service()
+    if service is None:
+        st.caption(
+            "AI機能は無効です。.env に GEMINI_API_KEY を設定して再起動すると、"
+            "AIのヒント・エラー解説・コードレビューが使えます。"
+        )
+        return
+
+    hint_col, explain_col, review_col = st.columns(3)
+    level = practice.next_ai_hint_level
+    hint_clicked = hint_col.button(
+        f"AIヒント({level}/{practice.total_hints})" if level else "AIヒントは使い切りました",
+        disabled=level is None,
+        width="stretch",
+    )
+    explain_clicked = explain_col.button(
+        "不合格の原因を考える",
+        disabled=not practice.can_explain_failure,
+        help="直近の実行が不合格のときに使えます",
+        width="stretch",
+    )
+    review_clicked = review_col.button(
+        "コードレビュー",
+        disabled=not practice.can_request_review,
+        help="直近の実行で合格したコードをレビューします",
+        width="stretch",
+    )
+
+    log = ai_log(exercise)
+    if hint_clicked or explain_clicked or review_clicked:
+        with st.spinner("AI が考えています..."):
+            if hint_clicked and level is not None:
+                # ヒントは「いま書いている途中のコード」を見てもらう
+                feedback = service.hint(exercise, code, level, practice.last_result)
+                if feedback.text:
+                    practice.use_ai_hint()  # 失敗した回は段階を進めない
+                log.append((f"AIヒント(段階{level})", feedback))
+            elif explain_clicked and practice.last_result is not None:
+                feedback = service.explain_failure(
+                    exercise, practice.last_code, practice.last_result
+                )
+                log.append(("不合格の原因", feedback))
+            elif review_clicked:
+                log.append(("コードレビュー", service.review(exercise, practice.last_code)))
+        # ボタンは押される前の状態で描画済み。「AIヒント(2/3)」などの表示を更新するため描き直す
+        st.rerun()
+
+    # 新しい回答を上に。最新のものだけ開いておく
+    for index, (title, feedback) in enumerate(reversed(log)):
+        with st.expander(title, expanded=index == 0):
+            if feedback.text:
+                st.markdown(feedback.text)
+            else:
+                st.error(feedback.error or "AI から回答が得られませんでした。")
+    if log:
+        st.caption("AI の回答は誤っていることもあります。鵜呑みにせず、実行して確かめましょう。")
 
 
 def render_solution(
@@ -231,6 +314,7 @@ def main() -> None:
         if practice.last_result is not None:
             st.caption(f"挑戦回数: {practice.attempts}")
             render_result(practice.last_result)
+        render_ai_assistant(exercise, practice, code)
 
     with left:
         render_problem(exercise)
