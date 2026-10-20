@@ -6,11 +6,12 @@
 
 import logging
 import sqlite3
-from datetime import date
+from datetime import date, datetime
 
 import streamlit as st
 
 from core.dashboard import format_duration, status_of, study_streak, topic_mastery
+from core.export import attempts_to_csv, progress_to_json
 from core.loader import load_all
 from core.models import Exercise
 from core.progress import AttemptRecord, ExerciseProgress, ProgressStore, Status, db_path_from_env
@@ -153,6 +154,31 @@ def render_recent_attempts(exercises: list[Exercise], attempts: list[AttemptReco
     st.dataframe(rows, hide_index=True)
 
 
+def render_export(
+    exercises: list[Exercise],
+    progress: dict[str, ExerciseProgress],
+    history: dict[str, list[AttemptRecord]],
+    reviews: dict[str, ReviewState],
+) -> None:
+    st.subheader("学習ログのエクスポート")
+    stamp = f"{datetime.now():%Y%m%d}"
+    csv_col, json_col = st.columns(2)
+    csv_col.download_button(
+        "挑戦履歴(CSV)",
+        data=attempts_to_csv(exercises, history),
+        file_name=f"study-attempts-{stamp}.csv",
+        mime="text/csv",
+        width="stretch",
+    )
+    json_col.download_button(
+        "進捗と履歴(JSON)",
+        data=progress_to_json(exercises, progress, history, reviews, datetime.now()),
+        file_name=f"study-progress-{stamp}.json",
+        mime="application/json",
+        width="stretch",
+    )
+
+
 def main() -> None:
     st.title("ダッシュボード")
     exercises = load_all().exercises
@@ -161,7 +187,8 @@ def main() -> None:
         progress = store.all_progress()
         study_dates = store.study_dates()
         attempts = store.recent_attempts(RECENT_LIMIT)
-        reviews = review_states(store.attempt_history())
+        history = store.attempt_history()
+        reviews = review_states(history)
     except (sqlite3.Error, OSError):
         logger.exception("進捗DBの読み込みに失敗")
         st.error("進捗DBを読み込めませんでした。ターミナルのログを確認してください。")
@@ -173,6 +200,7 @@ def main() -> None:
     render_topic_mastery(exercises, progress)
     render_exercise_table(exercises, progress, reviews)
     render_recent_attempts(exercises, attempts)
+    render_export(exercises, progress, history, reviews)
 
 
 main()

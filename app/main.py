@@ -21,6 +21,7 @@ page = st.navigation(
     [
         st.Page("pages/exercise.py", title="演習", icon="✍️", default=True),
         st.Page("pages/dashboard.py", title="ダッシュボード", icon="📊"),
+        st.Page("pages/playground.py", title="自由に試す", icon="🧪"),
     ]
 )
 page.run()

@@ -8,7 +8,7 @@ import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
-import ai.client
+import ai.feedback
 from core.loader import load_all
 from core.models import GradeResult
 from core.progress import ProgressStore
@@ -111,7 +111,7 @@ def test_ai_disabled_without_api_key(app: AppTest) -> None:
 
 
 def test_ai_buttons_follow_practice_state(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(ai.client, "create_client", FakeGenerator)
+    monkeypatch.setattr(ai.feedback, "create_client", FakeGenerator)
     app = start_app()
 
     def button(prefix: str) -> Any:
@@ -175,3 +175,27 @@ def test_due_review_is_marked(isolated_db: Path) -> None:
 
     app.switch_page("pages/dashboard.py").run()
     assert any(m.value == "🔁 復習(1回目)" for m in app.markdown)
+
+
+def test_playground_runs_code(app: AppTest) -> None:
+    app.switch_page("pages/playground.py").run()
+    assert app.title[0].value == "自由に試す"
+    click(app, "▶ 実行")
+    assert not app.exception
+    assert app.success[0].value.startswith("実行しました")
+    assert "python: 3" in app.code[0].value  # サンプルコードの出力
+    assert any("GEMINI_API_KEY" in c.value for c in app.caption)  # AI は無効
+
+
+def test_playground_ai_review(monkeypatch: pytest.MonkeyPatch, app: AppTest) -> None:
+    monkeypatch.setattr(ai.feedback, "create_client", FakeGenerator)
+    app.switch_page("pages/playground.py").run()
+    click(app, "このコードをレビューしてもらう")
+    assert any(m.value == "AIの回答です" for m in app.markdown)
+
+
+def test_dashboard_has_export_buttons(app: AppTest) -> None:
+    app.switch_page("pages/dashboard.py").run()
+    # download_button 専用の取得メソッドが無いので、要素の種類で探して proto からラベルを読む
+    labels = [e.proto.label for e in app.get("download_button")]
+    assert labels == ["挑戦履歴(CSV)", "進捗と履歴(JSON)"]

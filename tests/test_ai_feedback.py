@@ -124,3 +124,17 @@ def test_summarize_result() -> None:
     assert "test_ng: assert 1 == 2" in summary
     assert "test_ok" not in summary  # 合格したケースは送らない
     assert "Traceback" in summary
+
+
+def test_free_review_sends_code_and_output() -> None:
+    fake = FakeGenerator()
+    FeedbackService(fake).free_review("print(1)", "標準出力:\n1")
+    prompt = fake.calls[0][1]
+    assert "print(1)" in prompt
+    assert "標準出力:\n1" in prompt
+
+
+def test_free_review_without_output() -> None:
+    fake = FakeGenerator()
+    FeedbackService(fake).free_review("x = 1", "")
+    assert "(まだ実行していません)" in fake.calls[0][1]

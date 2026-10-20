@@ -1,6 +1,6 @@
 import pytest
 
-from core.grading import MAX_CODE_CHARS, detect_error_type, grade, normalize_output
+from core.grading import MAX_CODE_CHARS, detect_error_type, grade, normalize_output, run_free
 from core.models import Exercise, IOCase
 
 
@@ -125,3 +125,14 @@ def test_detect_error_type(text: str, expected: str | None) -> None:
 
 def test_normalize_output_ignores_trailing_whitespace() -> None:
     assert normalize_output("a  \nb\n\n") == normalize_output("a\nb")
+
+
+def test_run_free_executes_code_with_stdin() -> None:
+    result = run_free("print(input()[::-1])", "abc")
+    assert result.ok
+    assert result.stdout.strip() == "cba"
+
+
+def test_run_free_rejects_too_long_code() -> None:
+    with pytest.raises(ValueError, match="長すぎます"):
+        run_free("#" * (MAX_CODE_CHARS + 1))

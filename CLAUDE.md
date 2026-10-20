@@ -10,7 +10,7 @@ Pythonコードを書いて実行 → 自動採点 → AIフィードバック�
 
 ## ディレクトリ
 - `app/` Streamlit UI層(薄く保つ。ロジックを書かない)
-- `core/` ドメインロジック(採点・進捗・間隔反復・おすすめ)。**Streamlitをimportしない**
+- `core/` ドメインロジック(採点・進捗・間隔反復・おすすめ・エクスポート)。**Streamlitをimportしない**
 - `runner/` 学習者コードの隔離実行(subprocess + タイムアウト + 出力上限)
 - `ai/` Gemini APIクライアントとフィードバック生成(キー未設定・失敗時もアプリは落ちない)
 - `prompts/` AIプロンプト(**コード内にプロンプト文をハードコードしない**)
@@ -25,6 +25,7 @@ uv run pytest --cov=core --cov=runner # カバレッジ
 uv run ruff check . && uv run ruff format .
 uv run mypy .
 uv run python scripts/verify_solutions.py
+uv run python scripts/verify_solutions.py --id <id> --try <file>  # 任意コードで採点
 ```
 
 ## コーディング規約
@@ -40,4 +41,4 @@ uv run python scripts/verify_solutions.py
 - 動かして確認していないコードを「完成」と報告しない
 
 ## Skills
-- `add-exercise` 演習を1問追加 / `review-exercise` 演習の品質レビュー / `verify-app` 一括検証
+- `add-exercise` 演習を1問追加 / `review-exercise` 演習の品質レビュー(ずるい解答で抜け穴を実証)/ `verify-app` 一括検証

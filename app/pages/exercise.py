@@ -13,8 +13,7 @@ from datetime import date
 import streamlit as st
 from streamlit_ace import st_ace
 
-from ai.client import create_client
-from ai.feedback import Feedback, FeedbackService
+from ai.feedback import Feedback, FeedbackService, create_feedback_service
 from core.grading import grade
 from core.loader import LoadResult, load_all
 from core.models import Exercise, GradeResult
@@ -37,8 +36,7 @@ def get_feedback_service() -> FeedbackService | None:
 
     .env の APIキーを変えた場合は、アプリを再起動すると反映される。
     """
-    client = create_client()
-    return FeedbackService(client) if client else None
+    return create_feedback_service()
 
 
 def open_store() -> ProgressStore | None:

@@ -4,7 +4,7 @@ import re
 
 from core.models import CaseOutcome, Exercise, GradeResult
 from runner.pytest_runner import run_pytest, run_script
-from runner.sandbox import RunLimits
+from runner.sandbox import RunLimits, RunResult
 
 MAX_CODE_CHARS = 20_000
 
@@ -116,3 +116,10 @@ def _grade_io(exercise: Exercise, code: str, limits: RunLimits) -> GradeResult:
         truncated=truncated,
         error_type=error_type,
     )
+
+
+def run_free(code: str, stdin: str = "") -> RunResult:
+    """お題なしでコードを実行する(「自由に試す」ページ用)。採点はしない。"""
+    if len(code) > MAX_CODE_CHARS:
+        raise ValueError(f"コードが長すぎます({MAX_CODE_CHARS}文字まで)")
+    return run_script(code, stdin, RunLimits())

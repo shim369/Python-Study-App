@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from string import Template
 
-from ai.client import AIError, TextGenerator
+from ai.client import AIError, TextGenerator, create_client
 from core.models import Exercise, GradeResult
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
@@ -94,6 +94,14 @@ class FeedbackService:
             solution=exercise.solution,
         )
 
+    def free_review(self, code: str, output: str) -> Feedback:
+        """お題のないコードのレビュー(「自由に試す」ページ用)。output は実行結果の要約。"""
+        return self._ask(
+            "free_review",
+            code=clip(code, MAX_CODE_CHARS),
+            output=clip(output, MAX_RESULT_CHARS) if output else "(まだ実行していません)",
+        )
+
     def _ask(self, prompt_name: str, **values: str) -> Feedback:
         prompt = load_prompt(prompt_name).substitute(values)
         key = hashlib.sha256(prompt.encode()).hexdigest()
@@ -108,3 +116,9 @@ class FeedbackService:
             self._cache.pop(next(iter(self._cache)))  # いちばん古いものを捨てる
         self._cache[key] = text
         return Feedback(text=text)
+
+
+def create_feedback_service() -> FeedbackService | None:
+    """APIキーが設定されていれば FeedbackService を作る。未設定なら None(AI機能なし)。"""
+    client = create_client()
+    return FeedbackService(client) if client else None
