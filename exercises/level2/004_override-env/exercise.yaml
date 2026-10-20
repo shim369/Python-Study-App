@@ -1,0 +1,72 @@
+id: l2-004-override-env
+title: 環境変数を一時的に変える
+level: 2
+topic: context-manager
+kind: write
+grading: pytest
+description: |
+  ## やること
+  `with` ブロックの中だけ環境変数を書き換え、ブロックを抜けたら元に戻す
+  コンテキストマネージャ `override_env(**values)` を実装してください。
+
+  ```python
+  with override_env(APP_ENV="test", DEBUG=None):
+      ...  # この中では APP_ENV="test"、DEBUG は存在しない
+  # ここでは元どおり
+  ```
+
+  ## ルール
+  - 値が文字列のキーは、その値を `os.environ` に設定する
+  - 値が `None` のキーは、`os.environ` から削除する(元から無ければ何もしない)
+  - ブロックを抜けたら **元の状態に正確に戻す**
+    - 元の値があったキーは元の値に戻す
+    - 元々存在しなかったキーは削除する
+  - ブロック内で例外が起きても元に戻し、例外はそのまま伝える
+  - 指定していないキーには触らない
+
+  初期コードの `@contextmanager` を使うと、`yield` の前が「入るとき」、後が「出るとき」の
+  処理になります。
+starter_code: |
+  import os
+  from collections.abc import Iterator
+  from contextlib import contextmanager
+
+
+  @contextmanager
+  def override_env(**values: str | None) -> Iterator[None]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    書き換える前に「元の状態」を覚えておき、出るときにそれを書き戻す、という形にしましょう。「元々無かった」ことも覚えておく必要があります。
+  - >-
+    os.environ.get(key) は無ければ None を返すので、「元の状態」を values と同じ形({キー: 値 or None})で保存できます。例外が起きても必ず戻すには try / finally を使います。
+  - >-
+    手順:{key: os.environ.get(key) for key in values} で元の状態を保存 → try の中で values を適用して yield → finally で保存した状態を適用。「適用」は None なら pop(key, None)、それ以外は代入、という小さな関数にすると2回使えます。
+solution: |
+  import os
+  from collections.abc import Iterator
+  from contextlib import contextmanager
+
+
+  @contextmanager
+  def override_env(**values: str | None) -> Iterator[None]:
+      saved = {key: os.environ.get(key) for key in values}
+      try:
+          _apply(values)
+          yield
+      finally:
+          _apply(saved)
+
+
+  def _apply(values: dict[str, str | None]) -> None:
+      for key, value in values.items():
+          if value is None:
+              os.environ.pop(key, None)
+          else:
+              os.environ[key] = value
+php_note: |
+  PHPには `with` 文がなく、後片付けは `try { ... } finally { ... }` を毎回書きます。
+  Pythonのコンテキストマネージャは「準備と後片付け」を1か所にまとめて再利用できる仕組みで、
+  ファイル(`with open(...)`)やDB接続、ロックなどで日常的に使います。
+tags: [context-manager, contextlib, os]

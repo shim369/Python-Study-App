@@ -1,5 +1,6 @@
 """画面のスモークテスト(Streamlit の AppTest でブラウザなしに画面を動かす)。"""
 
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,8 @@ from streamlit.testing.v1 import AppTest
 
 import ai.client
 from core.loader import load_all
+from core.models import GradeResult
+from core.progress import ProgressStore
 
 MAIN_SCRIPT = Path(__file__).resolve().parent.parent / "app" / "main.py"
 FIRST = load_all().exercises[0]
@@ -144,3 +147,31 @@ def test_selection_is_kept_when_label_changes(app: AppTest) -> None:
     assert not app.exception
     assert app.title[0].value == second.title
     assert any(c.value == "挑戦回数: 2" for c in app.caption)
+
+
+def test_selection_survives_page_switch(app: AppTest) -> None:
+    second = load_all().exercises[1]
+    app.sidebar.selectbox[0].select_index(1).run()
+    app.switch_page("pages/dashboard.py").run()
+    app.switch_page("pages/exercise.py").run()
+    assert app.title[0].value == second.title
+
+
+def test_dashboard_todo_opens_exercise(app: AppTest) -> None:
+    app.switch_page("pages/dashboard.py").run()
+    todo_buttons = [b for b in app.button if b.label == "解く"]
+    todo_buttons[1].click().run()  # 何もしていなければカリキュラム順。2番目の問題を開く
+    assert not app.exception
+    assert app.title[0].value == load_all().exercises[1].title
+
+
+def test_due_review_is_marked(isolated_db: Path) -> None:
+    two_days_ago = datetime.now().astimezone() - timedelta(days=2)
+    ProgressStore(isolated_db).record_attempt(FIRST.id, GradeResult(passed=True), two_days_ago)
+
+    app = start_app()
+    assert app.sidebar.selectbox[0].options[0].startswith("🔁")
+    assert any("復習の時期です(1回目)" in i.value for i in app.info)
+
+    app.switch_page("pages/dashboard.py").run()
+    assert any(m.value == "🔁 復習(1回目)" for m in app.markdown)

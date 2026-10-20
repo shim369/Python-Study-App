@@ -1,0 +1,75 @@
+id: l2-005-money-dataclass
+title: お金を表す値オブジェクト
+level: 2
+topic: dataclass
+kind: write
+grading: pytest
+description: |
+  ## やること
+  金額と通貨を表す値オブジェクト `Money` と、通貨が違うときに送出する例外
+  `CurrencyMismatchError` を実装してください。
+
+  ## `Money` の仕様
+  - `Money(amount, currency)` で作る。`amount` は整数(負も可)、`currency` は通貨コード
+  - `currency` が **半角の英大文字(A〜Z)3文字**(例: `"JPY"`, `"USD"`)でなければ
+    `ValueError` を送出する
+  - **不変**(作成後に `amount` などへ代入すると例外になる)
+  - 金額と通貨が同じなら等しい(`==`)。`set` に入れたり辞書のキーにしたりできる
+  - `+` で足し算できる。結果は新しい `Money`
+  - 通貨が違うもの同士を足すと `CurrencyMismatchError` を送出する
+  - `str(money)` は3桁区切りの金額と通貨(例: `"1,200 JPY"`, `"-500 USD"`)
+
+  ## `CurrencyMismatchError` の仕様
+  - `ValueError` のサブクラスにする(`except ValueError` でも捕まえられるように)
+  - メッセージに両方の通貨コードを含める
+
+  ## 例
+  ```python
+  >>> str(Money(1000, "JPY") + Money(200, "JPY"))
+  '1,200 JPY'
+  >>> Money(1, "JPY") + Money(1, "USD")
+  CurrencyMismatchError: JPY と USD は足せません
+  ```
+starter_code: |
+  from dataclasses import dataclass
+
+  # CurrencyMismatchError と Money をここに実装
+hints:
+  - >-
+    「不変・値で比較・ハッシュ可能」は dataclass のオプション1つでまとめて実現できます。独自の例外は既存の例外クラスを継承して作ります。
+  - >-
+    @dataclass(frozen=True) にすると代入禁止と __eq__ / __hash__ が揃います。作成時の検証は __post_init__、足し算は __add__、文字列化は __str__ を定義します。3桁区切りは f-string の書式指定 {値:,} でできます。
+  - >-
+    手順:class CurrencyMismatchError(ValueError) を定義 → frozen な dataclass で amount と currency を宣言 → __post_init__ で「len が 3・isascii・isalpha・isupper」のどれかを満たさなければ ValueError(全角文字は isascii で除外) → __add__ で通貨を比べ、違えば CurrencyMismatchError、同じなら新しい Money を返す → __str__ を定義。
+solution: |
+  from dataclasses import dataclass
+
+
+  class CurrencyMismatchError(ValueError):
+      """通貨が違う Money 同士を計算しようとした。"""
+
+
+  @dataclass(frozen=True)
+  class Money:
+      amount: int
+      currency: str
+
+      def __post_init__(self) -> None:
+          code = self.currency
+          if not (len(code) == 3 and code.isascii() and code.isalpha() and code.isupper()):
+              raise ValueError(f"通貨コードは英大文字3文字にしてください: {code!r}")
+
+      def __add__(self, other: "Money") -> "Money":
+          if self.currency != other.currency:
+              raise CurrencyMismatchError(f"{self.currency} と {other.currency} は足せません")
+          return Money(self.amount + other.amount, self.currency)
+
+      def __str__(self) -> str:
+          return f"{self.amount:,} {self.currency}"
+php_note: |
+  PHP 8.2 の `readonly class` + コンストラクタプロモーションに近いものが、
+  `@dataclass(frozen=True)` の1行で手に入ります(`__eq__` や `__hash__` も自動生成)。
+  演算子オーバーロード(`__add__`)はPHPにはない機能で、値オブジェクトを自然に書けます。
+  独自例外は PHP と同様に既存の例外を継承して作りますが、`ValueError` など意味の近い
+  組み込み例外を親にすると、呼び出し側が広い単位でも捕まえられます。
+tags: [dataclass, exception, dunder]

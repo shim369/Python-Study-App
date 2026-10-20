@@ -1,0 +1,97 @@
+id: l4-001-wc-cli
+title: 行数・単語数を数えるCLI(argparse)
+level: 4
+topic: cli
+kind: write
+grading: pytest
+description: |
+  ## やること
+  テキストファイルの行数と単語数を表示するコマンドラインツールの本体
+  `main(argv)` を、標準ライブラリの `argparse` で実装してください。
+
+  ```
+  $ python pywc.py a.txt b.txt
+  3 10 a.txt
+  1 2 b.txt
+  $ python pywc.py -l a.txt
+  3 a.txt
+  ```
+
+  ## 仕様
+  - 引数: ファイル名を1つ以上(0個なら argparse のエラー)
+  - オプション: `-l` / `--lines`(行数だけ)、`-w` / `--words`(単語数だけ)
+    - どちらも指定しない、または両方指定したときは「行数 単語数」の両方
+  - 出力: ファイルごとに1行、`{行数} {単語数} {ファイル名}` を標準出力へ(表示しない項目は省く)
+    - ファイル名は引数で指定されたとおりに表示する
+    - 行数は `str.splitlines()` の要素数、単語数は `str.split()` の要素数(ファイルは UTF-8)
+  - 存在しないファイルは、標準エラーに `error: ファイルが見つかりません: {ファイル名}` を出して
+    次のファイルへ進む
+  - 戻り値(終了コード): すべて読めたら `0`、1つでも読めないファイルがあれば `1`
+  - argparse のエラー(未知のオプションなど)は argparse の標準どおり `SystemExit` でよい
+
+  テストでは `main(["-l", "a.txt"])` のように引数のリストを渡して呼び出します。
+  `argv` が `None` のときは、argparse がコマンドラインの引数(`sys.argv[1:]`)を使います。
+starter_code: |
+  import argparse
+  import sys
+  from pathlib import Path
+
+
+  def main(argv: list[str] | None = None) -> int:
+      # ここに実装
+      raise NotImplementedError
+
+
+  if __name__ == "__main__":
+      sys.exit(main())
+hints:
+  - >-
+    「引数の定義と解析」と「数えて表示する処理」を分けて考えましょう。引数の解析は argparse.ArgumentParser に任せ、自分で sys.argv を読まないのがポイントです。
+  - >-
+    add_argument("files", nargs="+") で1つ以上の位置引数、add_argument("-l", "--lines", action="store_true") でフラグになります。parse_args(argv) にリストを渡すとテストしやすくなります。エラー出力は print(..., file=sys.stderr) です。
+  - >-
+    手順:parser を作って parse_args(argv) → 「行数を表示するか」= lines が指定された or words が指定されていない(単語数も同様)→ ファイルごとに read_text、FileNotFoundError なら stderr に出して終了コードを 1 に → 表示する数を並べて print → 終了コードを返す。
+solution: |
+  import argparse
+  import sys
+  from pathlib import Path
+
+
+  def build_parser() -> argparse.ArgumentParser:
+      parser = argparse.ArgumentParser(prog="pywc", description="行数と単語数を数える")
+      parser.add_argument("files", nargs="+", help="対象のテキストファイル")
+      parser.add_argument("-l", "--lines", action="store_true", help="行数だけ表示する")
+      parser.add_argument("-w", "--words", action="store_true", help="単語数だけ表示する")
+      return parser
+
+
+  def main(argv: list[str] | None = None) -> int:
+      args = build_parser().parse_args(argv)
+      show_lines = args.lines or not args.words
+      show_words = args.words or not args.lines
+
+      exit_code = 0
+      for name in args.files:
+          try:
+              text = Path(name).read_text(encoding="utf-8")
+          except FileNotFoundError:
+              print(f"error: ファイルが見つかりません: {name}", file=sys.stderr)
+              exit_code = 1
+              continue
+          counts = []
+          if show_lines:
+              counts.append(len(text.splitlines()))
+          if show_words:
+              counts.append(len(text.split()))
+          print(*counts, name)
+      return exit_code
+
+
+  if __name__ == "__main__":
+      sys.exit(main())
+php_note: |
+  PHPでは `$argv` を自分で解析するか `getopt()` を使いますが、`getopt()` はヘルプの生成や
+  型の変換をしてくれません。Pythonの `argparse` は `--help` の自動生成・必須引数のチェック・
+  エラーメッセージまで面倒を見てくれます。
+  `main(argv)` が引数のリストを受け取る形にしておくと、テストから直接呼べるのが実務上のコツです。
+tags: [cli, argparse, pathlib, testing]

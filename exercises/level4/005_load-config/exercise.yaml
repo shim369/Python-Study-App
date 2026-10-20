@@ -1,0 +1,137 @@
+id: l4-005-load-config
+title: 設定ファイルの読み込みと検証(json)
+level: 4
+topic: json
+kind: write
+grading: pytest
+description: |
+  ## やること
+  JSON 形式の設定テキストを読み込み、検証して `Config` にする関数 `load_config(text)` を
+  実装してください。不正な内容は、原因が分かるメッセージ付きの `ConfigError` にします。
+  (`Config` と `ConfigError` は初期コードに定義済みです)
+
+  ## 設定の形式
+  ```json
+  {"host": "localhost", "port": 8080, "debug": true, "allowed_hosts": ["a.example", "b.example"]}
+  ```
+  | キー | 必須 | 型・条件 | 省略時 |
+  |---|---|---|---|
+  | `host` | ○ | 空でない文字列 | - |
+  | `port` | ○ | 整数で 1〜65535(`true` / `false` や `8080.0` は不可) | - |
+  | `debug` | | 真偽値 | `False` |
+  | `allowed_hosts` | | 文字列のリスト → `Config` ではタプルにする | `()` |
+
+  ## エラーにするもの(`ConfigError` を送出)
+  - JSON として読めない → 元の例外(`json.JSONDecodeError`)を原因として連結する(`raise ... from e`)
+  - トップレベルがオブジェクト(`{...}`)でない
+  - 上の表に無いキーがある(メッセージにそのキー名を含める)
+  - 必須キーが無い・型や条件が違う(メッセージにそのキー名を含める)
+
+  ## 例
+  ```python
+  >>> load_config('{"host": "localhost", "port": 8080}')
+  Config(host='localhost', port=8080, debug=False, allowed_hosts=())
+  >>> load_config('{"host": "localhost", "port": "8080"}')
+  ConfigError: port は 1〜65535 の整数にしてください
+  ```
+starter_code: |
+  import json
+  from dataclasses import dataclass
+
+
+  class ConfigError(Exception):
+      """設定の内容が不正。"""
+
+
+  @dataclass(frozen=True)
+  class Config:
+      host: str
+      port: int
+      debug: bool = False
+      allowed_hosts: tuple[str, ...] = ()
+
+
+  def load_config(text: str) -> Config:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    「JSONを読む」「形をチェックする」「Config を作る」の順に、問題があった時点で ConfigError を送出していく形にしましょう。キーごとのチェックは小さな関数に分けると読みやすくなります。
+  - >-
+    json.loads は失敗すると json.JSONDecodeError を送出します。型の判定は isinstance を使いますが、Python では bool が int のサブクラスなので isinstance(True, int) が True になる点に注意。未知のキーは「辞書のキーの集合 - 許可するキーの集合」で求められます。
+  - >-
+    手順:try で json.loads、JSONDecodeError なら raise ConfigError(...) from e → isinstance(data, dict) でなければエラー → data.keys() - 許可キー が空でなければエラー → host・port・debug・allowed_hosts を順に取り出して検証(port は type(port) is int で bool を除外)→ Config(...) を返す。
+solution: |
+  import json
+  from dataclasses import dataclass
+  from typing import Any
+
+
+  class ConfigError(Exception):
+      """設定の内容が不正。"""
+
+
+  @dataclass(frozen=True)
+  class Config:
+      host: str
+      port: int
+      debug: bool = False
+      allowed_hosts: tuple[str, ...] = ()
+
+
+  ALLOWED_KEYS = {"host", "port", "debug", "allowed_hosts"}
+
+
+  def load_config(text: str) -> Config:
+      try:
+          data = json.loads(text)
+      except json.JSONDecodeError as e:
+          raise ConfigError(f"JSON として読めません: {e}") from e
+      if not isinstance(data, dict):
+          raise ConfigError("設定は JSON オブジェクト({...})で書いてください")
+      unknown = data.keys() - ALLOWED_KEYS
+      if unknown:
+          raise ConfigError(f"未知のキーがあります: {', '.join(sorted(unknown))}")
+
+      return Config(
+          host=_host(data),
+          port=_port(data),
+          debug=_debug(data),
+          allowed_hosts=_allowed_hosts(data),
+      )
+
+
+  def _host(data: dict[str, Any]) -> str:
+      host = data.get("host")
+      if not isinstance(host, str) or not host:
+          raise ConfigError("host は空でない文字列にしてください")
+      return host
+
+
+  def _port(data: dict[str, Any]) -> int:
+      port = data.get("port")
+      # bool は int のサブクラスなので、isinstance ではなく type で厳密に判定する
+      if type(port) is not int or not 1 <= port <= 65535:
+          raise ConfigError("port は 1〜65535 の整数にしてください")
+      return port
+
+
+  def _debug(data: dict[str, Any]) -> bool:
+      debug = data.get("debug", False)
+      if not isinstance(debug, bool):
+          raise ConfigError("debug は true / false にしてください")
+      return debug
+
+
+  def _allowed_hosts(data: dict[str, Any]) -> tuple[str, ...]:
+      hosts = data.get("allowed_hosts", [])
+      if not isinstance(hosts, list) or not all(isinstance(h, str) for h in hosts):
+          raise ConfigError("allowed_hosts は文字列のリストにしてください")
+      return tuple(hosts)
+php_note: |
+  PHPの `json_decode()` は失敗すると `null` を返すだけですが(`JSON_THROW_ON_ERROR` を付けない限り)、
+  Pythonの `json.loads()` は必ず例外を送出します。
+  `raise ConfigError(...) from e` は、PHPの `new ConfigException($msg, 0, $previous)` と同じく
+  元の例外を連結する書き方で、トレースバックに両方が表示されます。
+  また `true` が整数として通ってしまう問題(`bool` は `int` のサブクラス)はPythonならではの落とし穴です。
+tags: [json, validation, exception, dataclass]

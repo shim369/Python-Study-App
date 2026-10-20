@@ -1,0 +1,58 @@
+id: l4-003-build-url
+title: クエリ付きURLの組み立て(urllib.parse)
+level: 4
+topic: http
+kind: write
+grading: pytest
+description: |
+  ## やること
+  APIを呼び出すためのURLを組み立てる関数 `build_url(base, path, params=None)` を実装してください。
+
+  ## ルール
+  - `base` と `path` は、間の `/` が **ちょうど1つ** になるようにつなぐ
+    (`base` の末尾や `path` の先頭に `/` があってもなくてもよい)
+  - `params` の内容をクエリ文字列にして `?` の後ろに付ける。順番は `params` の順
+    - 値が `int` なら文字列にする
+    - 値がリストなら、同じキーを要素の数だけ繰り返す(`tag=a&tag=b`)
+    - 値が `None` のキーは含めない
+    - キーと値は URL エンコードする。空白は `%20`、`/` は `%2F`、日本語は UTF-8 で `%E6%97%A5...` のように
+  - クエリにする項目が無い(`params` が `None`・空・全部 `None`)なら `?` を付けない
+
+  ## 例
+  ```python
+  >>> build_url("https://api.example.com/", "/v1/search", {"q": "python 3", "page": 2, "tag": ["web", "api"]})
+  'https://api.example.com/v1/search?q=python%203&page=2&tag=web&tag=api'
+  ```
+starter_code: |
+  from urllib.parse import quote, urlencode
+
+
+  def build_url(
+      base: str, path: str, params: dict[str, str | int | list[str] | None] | None = None
+  ) -> str:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    クエリ文字列のエンコードを自分で書く必要はありません。標準ライブラリ urllib.parse に、辞書からクエリ文字列を作る関数があります。
+  - >-
+    urlencode(辞書, doseq=True) はリストの値を同じキーの繰り返しにします。既定では空白が + になるので、quote_via=quote を渡すと %20 になります。端の / は rstrip("/") と lstrip("/") で揃えられます。
+  - >-
+    手順:base.rstrip("/") と path.lstrip("/") を "/" でつなぐ → 辞書内包表記で値が None の項目を除く → urlencode(..., doseq=True, quote_via=quote) → 結果が空文字列でなければ "?" でつないで返す。
+solution: |
+  from urllib.parse import quote, urlencode
+
+
+  def build_url(
+      base: str, path: str, params: dict[str, str | int | list[str] | None] | None = None
+  ) -> str:
+      url = f"{base.rstrip('/')}/{path.lstrip('/')}"
+      present = {key: value for key, value in (params or {}).items() if value is not None}
+      query = urlencode(present, doseq=True, quote_via=quote)
+      return f"{url}?{query}" if query else url
+php_note: |
+  PHPの `http_build_query()` に相当するのが `urllib.parse.urlencode()` です。
+  ただしPHPはリストを `tag[0]=web&tag[1]=api` の形にしますが、Pythonは `doseq=True` で
+  `tag=web&tag=api` にします(多くのAPIはこちらの形式を期待します)。
+  空白の扱い(`+` か `%20` か)は PHP の `PHP_QUERY_RFC3986` オプションと同じ違いです。
+tags: [http, urllib, url]

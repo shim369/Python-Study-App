@@ -1,0 +1,47 @@
+id: l2-002-passed-students
+title: 合格者の一覧(内包表記)
+level: 2
+topic: comprehension
+kind: write
+grading: pytest
+description: |
+  ## やること
+  学生ごとの点数の辞書 `scores`(`{名前: [点数, ...]}`)から、平均点が `threshold` 以上の
+  学生の名前をリストで返す関数 `passed_students(scores, threshold)` を実装してください。
+
+  ## ルール
+  - 平均点は `sum / 件数`(小数のまま比べる。丸めない)
+  - 点数のリストが空の学生は対象外(合格にしない)
+  - 並び順は **平均点の高い順**。平均点が同じなら **名前の昇順**
+  - 引数の辞書・リストは変更しない
+
+  ## 例
+  ```python
+  >>> passed_students({"sato": [80, 90], "suzuki": [60, 70], "tanaka": [100]}, 70)
+  ['tanaka', 'sato']
+  ```
+
+  ループで書いても構いませんが、辞書内包表記・リスト内包表記と `sorted` の `key` を
+  使うと短く書けます。
+starter_code: |
+  def passed_students(scores: dict[str, list[int]], threshold: float) -> list[str]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    「名前 → 平均点」の辞書をまず作り、そこから「合格者を選ぶ」「並べる」の順に考えましょう。
+  - >-
+    辞書内包表記 {k: v for ... if ...} で空リストを除きつつ平均を作れます。並べ替えは sorted の key 引数に「比べたい値のタプル」を返す関数を渡します。
+  - >-
+    手順:平均点の辞書を内包表記で作る(points が空なら除外)→ 平均が threshold 以上の名前を内包表記で集める → sorted の key に (-平均点, 名前) を返す lambda を渡して返す。
+solution: |
+  def passed_students(scores: dict[str, list[int]], threshold: float) -> list[str]:
+      averages = {name: sum(points) / len(points) for name, points in scores.items() if points}
+      passed = [name for name, average in averages.items() if average >= threshold]
+      return sorted(passed, key=lambda name: (-averages[name], name))
+php_note: |
+  PHPなら `array_filter` と `usort` を組み合わせるところです。
+  Pythonの `sorted(key=...)` は「比べるための値」を返す関数を渡すだけでよく、
+  タプル `(-平均点, 名前)` を返すと「平均点の降順 → 名前の昇順」の複合ソートになります
+  (PHPの `<=>` を連ねる比較関数を書く必要はありません)。
+tags: [comprehension, dict, sorted]

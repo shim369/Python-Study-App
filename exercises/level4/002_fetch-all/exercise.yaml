@@ -1,0 +1,71 @@
+id: l4-002-fetch-all
+title: 同時実行数を制限した並行取得(asyncio)
+level: 4
+topic: asyncio
+kind: write
+grading: pytest
+description: |
+  ## やること
+  複数のURLを **並行して** 取得する非同期関数 `fetch_all(urls, fetch, limit)` を実装してください。
+  相手のサーバーに負担をかけないよう、**同時に実行する取得は最大 `limit` 件**に制限します。
+
+  ## 引数
+  - `urls`: 取得するURLのリスト
+  - `fetch`: 1つのURLを取得する非同期関数(`await fetch(url)` で本文の文字列が返る)。
+    テストでは通信の代わりに `asyncio.sleep` で待つ偽物が渡されます
+  - `limit`: 同時に実行してよい `fetch` の最大数
+
+  ## ルール
+  - 戻り値は本文のリストで、**`urls` と同じ順番**(取得が終わった順ではない)
+  - 同時実行数は `limit` を超えてはいけない。一方で、`limit` 件までは本当に並行して実行すること
+    (1件ずつ順番に待つのは不可)
+  - `urls` が空なら空のリスト
+  - `limit` が 1 未満なら `ValueError`
+  - `fetch` が例外を送出したら、その例外をそのまま送出してよい
+
+  ## 例
+  ```python
+  >>> asyncio.run(fetch_all(["https://a.example", "https://b.example"], fetch, limit=2))
+  ['<a の本文>', '<b の本文>']
+  ```
+starter_code: |
+  import asyncio
+  from collections.abc import Awaitable, Callable
+
+
+  async def fetch_all(
+      urls: list[str], fetch: Callable[[str], Awaitable[str]], limit: int
+  ) -> list[str]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    「全部まとめて並行に走らせ、順番どおりに結果を集める」部分と、「同時に走る数を制限する」部分に分けて考えましょう。どちらも asyncio に道具があります。
+  - >-
+    asyncio.gather(*コルーチン) は並行に実行し、結果を渡した順番どおりのリストで返します。同時実行数の制限には asyncio.Semaphore(limit) を async with で使います。
+  - >-
+    手順:limit をチェック → Semaphore を作る → 「async with semaphore: return await fetch(url)」だけをする内側の async 関数を定義 → 各 URL についてその関数を呼んだものを gather に渡して await → list にして返す。
+solution: |
+  import asyncio
+  from collections.abc import Awaitable, Callable
+
+
+  async def fetch_all(
+      urls: list[str], fetch: Callable[[str], Awaitable[str]], limit: int
+  ) -> list[str]:
+      if limit < 1:
+          raise ValueError("limit は 1 以上にしてください")
+      semaphore = asyncio.Semaphore(limit)
+
+      async def fetch_one(url: str) -> str:
+          async with semaphore:  # 空きが出るまでここで待つ
+              return await fetch(url)
+
+      return list(await asyncio.gather(*(fetch_one(url) for url in urls)))
+php_note: |
+  PHPは基本的に1リクエスト1スレッドで同期的に動くため、並行HTTP取得には
+  `curl_multi_*` や Guzzle の Promise(`Pool` の `concurrency` オプション)を使います。
+  Pythonの `asyncio` は言語レベルの `async` / `await` で同じことを書けます。
+  `Semaphore` は「同時に入れる人数が決まった部屋」のようなもので、Guzzle Pool の
+  concurrency に相当します。
+tags: [asyncio, concurrency, semaphore]

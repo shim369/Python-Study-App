@@ -1,0 +1,53 @@
+id: l1-005-mutable-default
+title: デフォルト引数のバグ修正
+level: 1
+topic: function
+kind: bugfix
+grading: pytest
+description: |
+  ## 状況
+  同僚が書いた関数 `add_tag(tag, tags)` について、次のようなバグ報告が届きました。
+
+  > `add_tag("a")` を呼んだあとに `add_tag("b")` を呼ぶと、`["b"]` ではなく
+  > `["a", "b"]` が返ってきます。それに、渡したリストが勝手に書き換わります。
+
+  ## やること
+  仕様どおりに動くよう、初期コードを修正してください。
+
+  ## 仕様
+  - `tags` の末尾に `tag` を加えた**新しいリスト**を返す
+  - `tags` を省略したときは `[tag]` を返す(何回呼んでも、前の呼び出しの影響を受けない)
+  - 引数で渡された `tags` は変更しない
+  - `tags` のデフォルト値は、Python で「省略された」ことを表す定番の `None` にする
+
+  ## 例
+  ```python
+  >>> add_tag("a")
+  ['a']
+  >>> add_tag("b")
+  ['b']
+  >>> add_tag("c", ["x"])
+  ['x', 'c']
+  ```
+starter_code: |
+  def add_tag(tag: str, tags: list[str] = []) -> list[str]:
+      """tags の末尾に tag を加えたリストを返す。"""
+      tags.append(tag)
+      return tags
+hints:
+  - >-
+    デフォルト引数の値(ここでは [])は、関数を呼ぶたびに作られるのか、それとも1回だけ作られるのかを調べてみましょう。
+  - >-
+    デフォルト引数は「関数を定義したとき」に1回だけ評価され、同じリストが使い回されます。Python では「省略された」ことを None で表すのが定番です。また append は元のリストを書き換えます。
+  - >-
+    手順:デフォルト値を None にして型ヒントを list[str] | None に → None なら空のリストとして扱う → 元のリストを書き換えずに、要素を加えた新しいリストを作って返す。
+solution: |
+  def add_tag(tag: str, tags: list[str] | None = None) -> list[str]:
+      """tags の末尾に tag を加えた新しいリストを返す。"""
+      return [*(tags or []), tag]
+php_note: |
+  PHPのデフォルト引数 `function f($tags = [])` は呼び出しのたびに新しい配列になり、
+  配列も値渡し(コピー)なので、このバグは起きません。
+  Pythonではデフォルト値は**定義時に1回だけ**作られ、リストは参照で渡されるため、
+  「変更可能なデフォルト引数」はPHP経験者が最もハマりやすい落とし穴の1つです。
+tags: [function, list, bugfix]

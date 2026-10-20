@@ -1,6 +1,7 @@
-"""ダッシュボード: 全体の進み具合・トピック別習熟度・問題ごとの状態・直近の学習履歴。
+"""ダッシュボード: 今日やること(おすすめ・復習)・苦手トピック・習熟度・問題ごとの状態・履歴。
 
-集計は core/dashboard.py、データの読み込みは core/progress.py が担当し、ここは表示だけ。
+集計は core/(dashboard・srs・recommend)、データの読み込みは core/progress.py が担当し、
+ここは表示だけ。
 """
 
 import logging
@@ -13,10 +14,13 @@ from core.dashboard import format_duration, status_of, study_streak, topic_maste
 from core.loader import load_all
 from core.models import Exercise
 from core.progress import AttemptRecord, ExerciseProgress, ProgressStore, Status, db_path_from_env
+from core.recommend import recommend, weak_topics
+from core.srs import ReviewState, review_states
 
 logger = logging.getLogger(__name__)
 
 RECENT_LIMIT = 15
+RECOMMEND_LIMIT = 5
 STATUS_ICONS = {Status.NOT_STARTED: "⬜", Status.IN_PROGRESS: "✏️", Status.PASSED: "✅"}
 
 
@@ -30,6 +34,43 @@ def render_summary(
     col1.metric("合格した問題", f"{passed} / {len(exercises)}")
     col2.metric("連続学習日数", f"{study_streak(study_dates, date.today())} 日")
     col3.metric("総挑戦回数", f"{attempts_total} 回")
+
+
+def open_exercise(exercise_id: str) -> None:
+    """演習ページの「選択中の問題」を書き換えてから移動する。"""
+    st.session_state["current_exercise_id"] = exercise_id
+    st.switch_page("pages/exercise.py")
+
+
+def render_todo(
+    exercises: list[Exercise],
+    progress: dict[str, ExerciseProgress],
+    reviews: dict[str, ReviewState],
+) -> None:
+    st.subheader("今日やること")
+    recommendations = recommend(exercises, progress, reviews, date.today(), RECOMMEND_LIMIT)
+    if not recommendations:
+        st.success("全問合格・復習も完了しています!新しい演習を追加しましょう。")
+        return
+    for item in recommendations:
+        reason_col, title_col, button_col = st.columns([2, 5, 1], vertical_alignment="center")
+        reason_col.write(item.reason)
+        title_col.write(f"L{item.exercise.level} {item.exercise.title}")
+        if button_col.button("解く", key=f"todo:{item.exercise.id}"):
+            open_exercise(item.exercise.id)
+
+
+def render_weak_topics(exercises: list[Exercise], progress: dict[str, ExerciseProgress]) -> None:
+    st.subheader("苦手トピック")
+    weak = weak_topics(exercises, progress)
+    if not weak:
+        st.caption("今のところ苦手なトピックはありません。")
+        return
+    st.dataframe(
+        [{"トピック": w.topic, "苦手度": round(w.score, 1), "挑戦した問題": w.tried} for w in weak],
+        hide_index=True,
+    )
+    st.caption("苦手度 = 1問あたりの(不合格の回数 + ヒント使用数 + 模範解答を見たら3)の平均")
 
 
 def render_topic_mastery(exercises: list[Exercise], progress: dict[str, ExerciseProgress]) -> None:
@@ -54,7 +95,19 @@ def render_topic_mastery(exercises: list[Exercise], progress: dict[str, Exercise
     )
 
 
-def render_exercise_table(exercises: list[Exercise], progress: dict[str, ExerciseProgress]) -> None:
+def review_label(review: ReviewState | None) -> str:
+    if review is None:
+        return ""
+    if review.completed:
+        return "完了"
+    return f"{review.next_review_number}回目: {review.due_date:%m/%d}"
+
+
+def render_exercise_table(
+    exercises: list[Exercise],
+    progress: dict[str, ExerciseProgress],
+    reviews: dict[str, ReviewState],
+) -> None:
     st.subheader("問題ごとの状態")
     rows = []
     for exercise in exercises:
@@ -70,10 +123,14 @@ def render_exercise_table(exercises: list[Exercise], progress: dict[str, Exercis
                 "ヒント使用": found.hints_used if found else 0,
                 "模範解答を見た": "👀" if found and found.solution_viewed else "",
                 "合格までの時間": format_duration(time_to_pass) if time_to_pass else "",
+                "次の復習": review_label(reviews.get(exercise.id)),
             }
         )
     st.dataframe(rows, hide_index=True)
-    st.caption("合格までの時間 = 問題を初めて開いてから、初めて合格するまで")
+    st.caption(
+        "合格までの時間 = 問題を初めて開いてから、初めて合格するまで / "
+        "復習 = 初合格の1日後・3日後・7日後"
+    )
 
 
 def render_recent_attempts(exercises: list[Exercise], attempts: list[AttemptRecord]) -> None:
@@ -104,14 +161,17 @@ def main() -> None:
         progress = store.all_progress()
         study_dates = store.study_dates()
         attempts = store.recent_attempts(RECENT_LIMIT)
+        reviews = review_states(store.attempt_history())
     except (sqlite3.Error, OSError):
         logger.exception("進捗DBの読み込みに失敗")
         st.error("進捗DBを読み込めませんでした。ターミナルのログを確認してください。")
         return
 
     render_summary(exercises, progress, study_dates)
+    render_todo(exercises, progress, reviews)
+    render_weak_topics(exercises, progress)
     render_topic_mastery(exercises, progress)
-    render_exercise_table(exercises, progress)
+    render_exercise_table(exercises, progress, reviews)
     render_recent_attempts(exercises, attempts)
 
 

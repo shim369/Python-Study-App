@@ -1,0 +1,65 @@
+id: l3-001-find-files
+title: ファイルを探す(pathlib)
+level: 3
+topic: pathlib
+kind: write
+grading: pytest
+description: |
+  ## やること
+  ディレクトリ `root` の中(サブディレクトリも含む)から条件に合うファイルを探し、
+  `root` からの相対パスの一覧を返す関数 `find_files(root, suffix, min_bytes=0)` を実装してください。
+
+  ## ルール
+  - 拡張子が `suffix`(例: `".txt"`)のファイルだけを対象にする。拡張子の大文字・小文字は区別しない
+    - 拡張子は最後の `.` 以降(`"archive.tar.gz"` の拡張子は `".gz"`)
+  - ファイルサイズが `min_bytes` バイト以上のものだけを対象にする
+  - ディレクトリは対象外(名前が `notes.txt` のディレクトリがあっても含めない)
+  - 戻り値は `root` からの相対パスを **`/` 区切りの文字列**にしたもの(例: `"docs/a.txt"`)を、昇順に並べたリスト
+
+  ## 例
+  ```
+  root/
+  ├── a.txt          (10バイト)
+  ├── b.md
+  └── docs/
+      └── c.TXT      (0バイト)
+  ```
+  ```python
+  >>> find_files(root, ".txt")
+  ['a.txt', 'docs/c.TXT']
+  >>> find_files(root, ".txt", min_bytes=1)
+  ['a.txt']
+  ```
+starter_code: |
+  from pathlib import Path
+
+
+  def find_files(root: Path, suffix: str, min_bytes: int = 0) -> list[str]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    os.walk や文字列の結合を使わなくても、pathlib.Path のメソッドだけで「再帰的に探す」「拡張子を見る」「サイズを見る」「相対パスにする」が全部できます。
+  - >-
+    Path.rglob("*") で配下を再帰的に列挙できます。is_file()、suffix、stat().st_size、relative_to(root)、as_posix() を調べてみましょう。
+  - >-
+    手順:root.rglob("*") でループ → is_file() で、suffix を lower() したものが一致し、stat().st_size が min_bytes 以上のものだけ残す → relative_to(root).as_posix() で文字列にする → sorted して返す。
+solution: |
+  from pathlib import Path
+
+
+  def find_files(root: Path, suffix: str, min_bytes: int = 0) -> list[str]:
+      matches = (
+          path
+          for path in root.rglob("*")
+          if path.is_file()
+          and path.suffix.lower() == suffix.lower()
+          and path.stat().st_size >= min_bytes
+      )
+      return sorted(path.relative_to(root).as_posix() for path in matches)
+php_note: |
+  PHPでは `RecursiveIteratorIterator` + `RecursiveDirectoryIterator` や `glob()` と
+  `pathinfo()`、`filesize()` などの関数を組み合わせますが、Pythonの `pathlib.Path` は
+  パスをオブジェクトとして扱い、`path.suffix` や `path.stat()` のようにメソッドで操作します。
+  `root / "docs" / "a.txt"` のように `/` 演算子でパスを結合できるのも特徴です。
+tags: [pathlib, filesystem, generator]

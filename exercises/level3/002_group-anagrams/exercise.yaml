@@ -1,0 +1,49 @@
+id: l3-002-group-anagrams
+title: アナグラムのグループ分け
+level: 3
+topic: collections
+kind: write
+grading: pytest
+description: |
+  ## やること
+  単語のリスト `words` を、アナグラム(並べ替えると同じ文字列になる単語)ごとのグループに
+  分ける関数 `group_anagrams(words)` を実装してください。
+
+  ## ルール
+  - 単語はすべて英小文字のみ(大文字小文字の変換は不要)
+  - グループの並びは、**各グループの最初の単語が `words` に出てきた順**
+  - グループ内の単語の並びも、`words` に出てきた順
+  - 同じ単語が複数回出てきたら、その回数だけグループに入れる
+  - `words` が空なら空のリストを返す
+  - 引数のリストは変更しない
+
+  ## 例
+  ```python
+  >>> group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"])
+  [['eat', 'tea', 'ate'], ['tan', 'nat'], ['bat']]
+  ```
+starter_code: |
+  def group_anagrams(words: list[str]) -> list[list[str]]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    アナグラム同士で必ず同じになる「代表の値」を1つ決めて、それをキーにした辞書でグループを作りましょう。
+  - >-
+    文字を sorted で並べ替えて join した文字列は、アナグラム同士で同じになります。キーが無いときに空リストを自動で作ってくれる辞書が collections モジュールにあります。また Python の辞書は追加した順番を保ちます。
+  - >-
+    手順:collections.defaultdict(list) を用意 → 各単語について "".join(sorted(word)) をキーにして append → 辞書の values() をリストにして返す。
+solution: |
+  from collections import defaultdict
+
+
+  def group_anagrams(words: list[str]) -> list[list[str]]:
+      groups: defaultdict[str, list[str]] = defaultdict(list)
+      for word in words:
+          groups["".join(sorted(word))].append(word)
+      return list(groups.values())
+php_note: |
+  PHPなら `$groups[$key][] = $word;` と書けば未定義のキーでも配列が自動で作られますが、
+  Pythonの普通の辞書では `KeyError` になります。`collections.defaultdict(list)` を使うと
+  PHPと同じように書けます。また Python 3.7 以降の辞書は、PHPの連想配列と同じく挿入順を保ちます。
+tags: [collections, defaultdict, dict]

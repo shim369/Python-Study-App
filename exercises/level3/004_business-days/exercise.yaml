@@ -1,0 +1,54 @@
+id: l3-004-business-days
+title: 営業日を数える(datetime)
+level: 3
+topic: datetime
+kind: write
+grading: pytest
+description: |
+  ## やること
+  期間 `start` 〜 `end`(**両端を含む**)の営業日の数を返す関数
+  `count_business_days(start, end, holidays=())` を実装してください。
+
+  ## ルール
+  - 営業日は月曜〜金曜のうち、`holidays` に含まれない日
+  - `holidays` は `date` のイテラブル(リストでも集合でもよい)。土日の祝日が入っていてもよい
+  - `start` が `end` より後なら `0` を返す
+
+  ## 例
+  2026年10月19日は月曜日です。
+  ```python
+  >>> count_business_days(date(2026, 10, 19), date(2026, 10, 25))   # 月〜日
+  5
+  >>> count_business_days(date(2026, 10, 19), date(2026, 10, 23), [date(2026, 10, 21)])
+  4
+  ```
+starter_code: |
+  from collections.abc import Iterable
+  from datetime import date
+
+
+  def count_business_days(start: date, end: date, holidays: Iterable[date] = ()) -> int:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    期間の1日ずつを順に作り、「平日か」「祝日でないか」を判定して数えましょう。日付の足し算には専用の型があります。
+  - >-
+    date 同士の引き算は timedelta になり、.days で日数が取れます。曜日は date.weekday()(月曜が 0、日曜が 6)です。祝日の判定を速くするため、holidays は set にしておきます。
+  - >-
+    手順:holidays を set に → (end - start).days + 1 回ループして start + timedelta(days=n) を作る(負なら range は空になる)→ weekday() が 5 未満で、祝日に含まれない日を数える。
+solution: |
+  from collections.abc import Iterable
+  from datetime import date, timedelta
+
+
+  def count_business_days(start: date, end: date, holidays: Iterable[date] = ()) -> int:
+      closed = set(holidays)
+      days = (start + timedelta(days=n) for n in range((end - start).days + 1))
+      return sum(1 for day in days if day.weekday() < 5 and day not in closed)
+php_note: |
+  PHPの `DateTime::modify('+1 day')` は元のオブジェクトを書き換えますが(`DateTimeImmutable` を除く)、
+  Pythonの `date` は不変で、`day + timedelta(days=1)` は新しい日付を返します。
+  曜日は PHPの `format('N')`(月曜=1)と違い、`weekday()` は月曜=0 です
+  (`isoweekday()` なら月曜=1)。
+tags: [datetime, timedelta, generator]

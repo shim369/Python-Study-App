@@ -1,0 +1,43 @@
+id: l1-003-palindrome
+title: 回文の判定
+level: 1
+topic: string
+kind: write
+grading: pytest
+description: |
+  ## やること
+  文字列 `text` が回文(前から読んでも後ろから読んでも同じ)かどうかを判定する
+  関数 `is_palindrome(text)` を実装してください。
+
+  ## ルール
+  - 英数字(`str.isalnum()` が `True` になる文字)だけを見て判定する。空白や記号は無視する
+  - 大文字・小文字は区別しない
+  - 判定に使う文字が1つもない場合(空文字列など)は `True` を返す
+
+  ## 例
+  ```python
+  >>> is_palindrome("A man, a plan, a canal: Panama")
+  True
+  >>> is_palindrome("race a car")
+  False
+  ```
+starter_code: |
+  def is_palindrome(text: str) -> bool:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    「判定に使う文字だけを取り出して揃える」と「逆順と比べる」の2つに分けて考えましょう。
+  - >-
+    文字の種類は str.isalnum()、大文字小文字は str.lower() で揃えられます。シーケンスはスライスで逆順にできます。
+  - >-
+    手順:text の各文字のうち isalnum() なものだけを小文字にして集める → それを [::-1] で逆順にしたものと == で比べた結果を返す。
+solution: |
+  def is_palindrome(text: str) -> bool:
+      chars = [char.lower() for char in text if char.isalnum()]
+      return chars == chars[::-1]
+php_note: |
+  PHPでは `strrev()` で逆順にしますが、Pythonでは文字列・リストなどどのシーケンスでも
+  スライス `[::-1]` で逆順を作れます(`[開始:終了:ステップ]` のステップに -1 を指定)。
+  `ctype_alnum($c)` に相当するのが `c.isalnum()` です。
+tags: [string, slice, comprehension]

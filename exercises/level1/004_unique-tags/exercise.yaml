@@ -1,0 +1,49 @@
+id: l1-004-unique-tags
+title: タグの重複除去
+level: 1
+topic: set
+kind: write
+grading: pytest
+description: |
+  ## やること
+  ブログ記事に付けるタグのリスト `tags` を整理する関数 `unique_tags(tags)` を実装してください。
+
+  ## ルール
+  - 各タグの前後の空白を取り除く
+  - 空白を取り除いた結果が空文字列になるタグは捨てる
+  - 大文字・小文字だけが違うタグは**同じタグ**とみなし、**最初に出てきた表記**を残す
+  - 結果は、最初に出てきた順番を保つ
+  - 引数のリストは変更しない
+
+  ## 例
+  ```python
+  >>> unique_tags(["Python", " php ", "python", "PHP", "", "Go"])
+  ['Python', 'php', 'Go']
+  ```
+starter_code: |
+  def unique_tags(tags: list[str]) -> list[str]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    「もう出てきたタグか?」を素早く調べるための入れ物を、結果のリストとは別に用意しましょう。
+  - >-
+    「含まれているか」の判定は set が得意です(リストより速い)。比較用のキーは小文字に揃えた文字列にします。
+  - >-
+    手順:見たキーの set と結果のリストを用意 → 各タグを strip → 空なら飛ばす → lower() したキーが set に無ければ、set に追加して結果に append → 最後に結果を返す。
+solution: |
+  def unique_tags(tags: list[str]) -> list[str]:
+      seen: set[str] = set()
+      result: list[str] = []
+      for tag in tags:
+          tag = tag.strip()
+          key = tag.lower()
+          if tag and key not in seen:
+              seen.add(key)
+              result.append(tag)
+      return result
+php_note: |
+  PHPの `array_unique()` に近いですが、大文字小文字を無視するには自分で比較用のキーを作ります。
+  PHPでは `isset($seen[$key])` を「集合」の代わりに使いますが、Pythonには専用の型 `set` があり、
+  `key in seen` の判定は要素数に関係なくほぼ一定時間で済みます。
+tags: [set, list, string]

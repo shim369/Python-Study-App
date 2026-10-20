@@ -8,6 +8,7 @@ AI フィードバックは ai/ に任せる。APIキー未設定や API エラ�
 import logging
 import sqlite3
 from collections.abc import Callable
+from datetime import date
 
 import streamlit as st
 from streamlit_ace import st_ace
@@ -19,6 +20,7 @@ from core.loader import LoadResult, load_all
 from core.models import Exercise, GradeResult
 from core.practice import PracticeState
 from core.progress import ProgressStore, db_path_from_env
+from core.srs import ReviewState, review_states
 
 logger = logging.getLogger(__name__)
 
@@ -93,27 +95,66 @@ def reset_editor(exercise: Exercise) -> None:
     st.session_state[version_key] = st.session_state.get(version_key, 0) + 1
 
 
-def exercise_label(exercise: Exercise, store: ProgressStore | None) -> str:
+def load_reviews(store: ProgressStore | None) -> dict[str, ReviewState]:
+    """復習の状態。採点のたびに変わるのでキャッシュせず、再実行ごとにDBから計算する。"""
+    return use_db(store, lambda s: review_states(s.attempt_history())) or {}
+
+
+def exercise_label(
+    exercise: Exercise, store: ProgressStore | None, review: ReviewState | None
+) -> str:
     practice = get_practice(exercise, store)
-    mark = "✅ " if practice.passed else "✏️ " if practice.attempts else ""
+    if review is not None and review.is_due(date.today()):
+        mark = "🔁 "
+    elif practice.passed:
+        mark = "✅ "
+    elif practice.attempts:
+        mark = "✏️ "
+    else:
+        mark = ""
     return f"{mark}L{exercise.level} {exercise.level_name} | {exercise.title}"
 
 
-def select_exercise(exercises: list[Exercise], store: ProgressStore | None) -> Exercise:
+# 選択中の問題の id。ダッシュボードの「解く」ボタンもここに書き込む
+CURRENT_EXERCISE_KEY = "current_exercise_id"
+_SELECTBOX_KEY = "_exercise_selectbox"
+
+
+def remember_selection() -> None:
+    st.session_state[CURRENT_EXERCISE_KEY] = st.session_state[_SELECTBOX_KEY]
+
+
+def select_exercise(
+    exercises: list[Exercise], store: ProgressStore | None, reviews: dict[str, ReviewState]
+) -> Exercise:
+    """問題を選ぶ。
+
+    widget の値は、その widget が無いページ(ダッシュボード)を表示すると消えてしまう。
+    そこで選択は widget ではない別の key に保存し、表示のたびに widget へ書き戻す。
+    """
     by_id = {ex.id: ex for ex in exercises}
+    current = st.session_state.get(CURRENT_EXERCISE_KEY)
+    if current in by_id:
+        st.session_state[_SELECTBOX_KEY] = current
     # ラベルは先に作っておく(format_func の中で毎回 session_state を引かずに済む)
-    labels = {ex.id: exercise_label(ex, store) for ex in exercises}
+    labels = {ex.id: exercise_label(ex, store, reviews.get(ex.id)) for ex in exercises}
     selected_id = st.sidebar.selectbox(
         "問題",
         options=list(by_id),
         format_func=labels.__getitem__,
-        key="selected_exercise_id",
+        key=_SELECTBOX_KEY,
+        on_change=remember_selection,
     )
     return by_id[selected_id]
 
 
-def render_problem(exercise: Exercise) -> None:
+def render_problem(exercise: Exercise, review: ReviewState | None) -> None:
     st.title(exercise.title)
+    if review is not None and review.is_due(date.today()):
+        st.info(
+            f"🔁 復習の時期です({review.next_review_number}回目)。"
+            "「初期コードに戻す」で、何も見ずにもう一度解いてみましょう。"
+        )
     tags = " ".join(f"`{tag}`" for tag in exercise.tags)
     st.caption(f"レベル{exercise.level}({exercise.level_name})・トピック: {exercise.topic}  {tags}")
     st.markdown(exercise.description)
@@ -282,7 +323,8 @@ def main() -> None:
         return
 
     store = open_store()
-    exercise = select_exercise(loaded.exercises, store)
+    reviews = load_reviews(store)
+    exercise = select_exercise(loaded.exercises, store, reviews)
     practice = get_practice(exercise, store)
     mark_started(exercise, store)
 
@@ -317,7 +359,7 @@ def main() -> None:
         render_ai_assistant(exercise, practice, code)
 
     with left:
-        render_problem(exercise)
+        render_problem(exercise, reviews.get(exercise.id))
         render_hints(exercise, practice, store)
         render_solution(exercise, practice, store)
 

@@ -124,3 +124,22 @@ def test_db_path_relative_to_project_root(monkeypatch: pytest.MonkeyPatch) -> No
 def test_db_path_absolute(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("STUDY_APP_DB_PATH", str(tmp_path / "x.db"))
     assert db_path_from_env() == tmp_path / "x.db"
+
+
+def test_failures_are_counted(store: ProgressStore) -> None:
+    store.record_attempt("l1-001-x", FAILED, now=T0)
+    store.record_attempt("l1-001-x", FAILED, now=T0)
+    store.record_attempt("l1-001-x", PASSED, now=T0)
+    store.start("l1-002-y", now=T0)
+    progress = store.all_progress()
+    assert progress["l1-001-x"].failures == 2
+    assert progress["l1-002-y"].failures == 0  # 挑戦なしでも 0(NULL にならない)
+
+
+def test_attempt_history_is_grouped_and_oldest_first(store: ProgressStore) -> None:
+    store.record_attempt("l1-001-x", FAILED, now=T0)
+    store.record_attempt("l1-002-y", PASSED, now=T0 + timedelta(minutes=1))
+    store.record_attempt("l1-001-x", PASSED, now=T0 + timedelta(minutes=2))
+    history = store.attempt_history()
+    assert [a.passed for a in history["l1-001-x"]] == [False, True]
+    assert [a.passed for a in history["l1-002-y"]] == [True]

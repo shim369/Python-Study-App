@@ -1,0 +1,66 @@
+id: l4-004-inject-clock
+title: テストしやすい設計に直す(時刻の注入)
+level: 4
+topic: testing
+kind: bugfix
+grading: pytest
+description: |
+  ## 状況
+  時間帯に合わせた挨拶を返す関数 `greeting(name)` があります。ところが次の問題があります。
+
+  1. 関数の中で `datetime.now()` を直接呼んでいるため、「朝7時ならこうなる」といった
+     テストが書けない(テストを実行する時刻によって結果が変わる)
+  2. 利用者から「11時ちょうどなのに『おはようございます』と言われた」と報告があった
+
+  ## やること
+  初期コードを修正してください。
+
+  ## 仕様
+  - シグネチャを `greeting(name: str, now: datetime | None = None) -> str` にする
+    - `now` を渡したときはその時刻を使う。省略したとき(`None`)は現在時刻を使う
+  - 時間帯と挨拶(`h` は時、範囲は「以上〜未満」)
+    - 5時〜11時: `おはようございます、{name}さん`
+    - 11時〜18時: `こんにちは、{name}さん`
+    - それ以外(18時〜翌5時): `こんばんは、{name}さん`
+
+  ## 例
+  ```python
+  >>> greeting("太郎", now=datetime(2026, 10, 20, 11, 0))
+  'こんにちは、太郎さん'
+  ```
+starter_code: |
+  from datetime import datetime
+
+
+  def greeting(name: str) -> str:
+      hour = datetime.now().hour
+      if 5 <= hour <= 11:
+          return f"おはようございます、{name}さん"
+      if 11 < hour < 18:
+          return f"こんにちは、{name}さん"
+      return f"こんばんは、{name}さん"
+hints:
+  - >-
+    テストできない原因は「関数が自分で現在時刻を取りに行っている」ことです。外から時刻を渡せるようにすると、テストでは好きな時刻を指定できます。境界の比較も見直しましょう。
+  - >-
+    引数のデフォルト値を None にして、None のときだけ datetime.now() を使う形にします(デフォルト値に datetime.now() を直接書くと、定義した時刻で固定されてしまいます)。「以上〜未満」は 5 <= hour < 11 のように書けます。
+  - >-
+    手順:引数に now: datetime | None = None を追加 → now が None なら datetime.now() を代入 → hour = now.hour → 5 <= hour < 11、11 <= hour < 18 の順に判定して挨拶を返す。
+solution: |
+  from datetime import datetime
+
+
+  def greeting(name: str, now: datetime | None = None) -> str:
+      hour = (now or datetime.now()).hour
+      if 5 <= hour < 11:
+          return f"おはようございます、{name}さん"
+      if 11 <= hour < 18:
+          return f"こんにちは、{name}さん"
+      return f"こんばんは、{name}さん"
+php_note: |
+  PHPでも `new DateTime()` や `time()` を関数内で直接呼ぶとテストが難しくなり、
+  Carbon の `Carbon::setTestNow()` や、時計(Clock)インターフェースの注入で解決します。
+  Pythonでも考え方は同じで、外部への依存(時刻・乱数・通信など)は引数で受け取れるようにすると、
+  モックライブラリに頼らずにテストできます。
+  また Python の比較は `5 <= hour < 11` のように連鎖して書けます。
+tags: [testing, datetime, design, bugfix]

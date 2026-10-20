@@ -55,6 +55,7 @@ class ExerciseProgress:
     exercise_id: str
     started_at: datetime
     attempts: int = 0
+    failures: int = 0
     hints_used: int = 0
     solution_viewed: bool = False
     first_passed_at: datetime | None = None
@@ -172,6 +173,7 @@ class ProgressStore:
     _PROGRESS_QUERY = """
         SELECT p.exercise_id, p.started_at, p.hints_used, p.solution_viewed,
                COUNT(a.id) AS attempts,
+               COUNT(a.id) - COALESCE(SUM(a.passed), 0) AS failures,
                MIN(CASE WHEN a.passed THEN a.attempted_at END) AS first_passed_at
         FROM progress AS p
         LEFT JOIN attempts AS a ON a.exercise_id = p.exercise_id
@@ -190,23 +192,26 @@ class ProgressStore:
             rows = conn.execute(f"{self._PROGRESS_QUERY} GROUP BY p.exercise_id").fetchall()
         return {row["exercise_id"]: _to_progress(row) for row in rows}
 
+    _ATTEMPT_COLUMNS = "exercise_id, attempted_at, passed, error_type, duration_ms"
+
     def recent_attempts(self, limit: int = 10) -> list[AttemptRecord]:
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT exercise_id, attempted_at, passed, error_type, duration_ms"
-                " FROM attempts ORDER BY id DESC LIMIT ?",
+                f"SELECT {self._ATTEMPT_COLUMNS} FROM attempts ORDER BY id DESC LIMIT ?",
                 (limit,),
             ).fetchall()
-        return [
-            AttemptRecord(
-                exercise_id=row["exercise_id"],
-                attempted_at=datetime.fromisoformat(row["attempted_at"]),
-                passed=bool(row["passed"]),
-                error_type=row["error_type"],
-                duration_ms=row["duration_ms"],
-            )
-            for row in rows
-        ]
+        return [_to_attempt(row) for row in rows]
+
+    def attempt_history(self) -> dict[str, list[AttemptRecord]]:
+        """問題ごとの全挑戦履歴(古い順)。復習の時期の計算に使う。"""
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT {self._ATTEMPT_COLUMNS} FROM attempts ORDER BY id"
+            ).fetchall()
+        history: dict[str, list[AttemptRecord]] = {}
+        for row in rows:
+            history.setdefault(row["exercise_id"], []).append(_to_attempt(row))
+        return history
 
     def study_dates(self) -> set[date]:
         """1回以上「実行」した日(ローカル時刻の日付)の集合。"""
@@ -221,7 +226,18 @@ def _to_progress(row: sqlite3.Row) -> ExerciseProgress:
         exercise_id=row["exercise_id"],
         started_at=datetime.fromisoformat(row["started_at"]),
         attempts=row["attempts"],
+        failures=row["failures"],
         hints_used=row["hints_used"],
         solution_viewed=bool(row["solution_viewed"]),
         first_passed_at=datetime.fromisoformat(first_passed) if first_passed else None,
+    )
+
+
+def _to_attempt(row: sqlite3.Row) -> AttemptRecord:
+    return AttemptRecord(
+        exercise_id=row["exercise_id"],
+        attempted_at=datetime.fromisoformat(row["attempted_at"]),
+        passed=bool(row["passed"]),
+        error_type=row["error_type"],
+        duration_ms=row["duration_ms"],
     )

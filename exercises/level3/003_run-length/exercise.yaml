@@ -1,0 +1,58 @@
+id: l3-003-run-length
+title: ランレングス圧縮(itertools)
+level: 3
+topic: itertools
+kind: write
+grading: pytest
+description: |
+  ## やること
+  同じ文字の連続を「文字と回数の組」で表すランレングス圧縮の、符号化と復号を実装してください。
+
+  - `encode(text)`: 文字列を `[(文字, 連続回数), ...]` のリストにする
+  - `decode(pairs)`: `encode` の結果から元の文字列に戻す
+
+  ## ルール
+  - 連続していない同じ文字は別の組になる(`"aba"` → `[("a", 1), ("b", 1), ("a", 1)]`)
+  - 大文字と小文字は別の文字
+  - 空文字列は空のリスト、空のリストは空文字列
+  - どんな文字列 `s` でも `decode(encode(s)) == s` が成り立つこと
+
+  ## 例
+  ```python
+  >>> encode("aaabccdddd")
+  [('a', 3), ('b', 1), ('c', 2), ('d', 4)]
+  >>> decode([('x', 2), ('y', 1)])
+  'xxy'
+  ```
+starter_code: |
+  def encode(text: str) -> list[tuple[str, int]]:
+      # ここに実装
+      raise NotImplementedError
+
+
+  def decode(pairs: list[tuple[str, int]]) -> str:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    「隣り合う同じ値をまとめる」処理は、自分でループと前の文字を管理しなくても、標準ライブラリの itertools に専用の関数があります。
+  - >-
+    itertools.groupby は、連続する同じ値ごとに (値, その値の並び) を返します。並びの個数は len(list(...)) で数えられます。復号は「文字 * 回数」で繰り返した文字列を join します。
+  - >-
+    手順:encode は groupby(text) の各 (char, group) から (char, len(list(group))) を作るリスト内包表記。decode は (char, count) ごとに char * count を作り、"".join(...) でつなぐ。
+solution: |
+  from itertools import groupby
+
+
+  def encode(text: str) -> list[tuple[str, int]]:
+      return [(char, len(list(group))) for char, group in groupby(text)]
+
+
+  def decode(pairs: list[tuple[str, int]]) -> str:
+      return "".join(char * count for char, count in pairs)
+php_note: |
+  PHPには `itertools.groupby` に相当する関数がなく、前の文字を変数に覚えておくループを
+  自分で書くことになります。Pythonの `itertools` は「イテレータを組み合わせる部品集」で、
+  `groupby` のほか `chain`・`islice`・`accumulate` などがよく使われます。
+  なお `groupby` は **連続する** 値だけをまとめる点に注意(SQLの GROUP BY とは違います)。
+tags: [itertools, groupby, string]

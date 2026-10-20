@@ -1,0 +1,96 @@
+id: l3-005-access-log
+title: アクセスログの解析(re)
+level: 3
+topic: re
+kind: write
+grading: pytest
+description: |
+  ## やること
+  Webサーバーのアクセスログ1行を解析し、`LogEntry` にして返す関数
+  `parse_access_log(line)` を実装してください。形式に合わない行は `None` を返します。
+
+  ## ログの形式
+  ```
+  127.0.0.1 - - [20/Oct/2026:10:15:32 +0900] "GET /index.html HTTP/1.1" 200 1534
+  ```
+  空白区切りで、左から順に
+  1. IPアドレス(空白を含まない文字列)
+  2. `-` などの2つの項目(空白を含まない文字列。使わない)
+  3. `[` と `]` で囲まれた日時(使わない)
+  4. `"` で囲まれたリクエスト:`メソッド(英大文字) パス(空白を含まない) プロトコル`
+  5. ステータスコード(数字3桁)
+  6. レスポンスサイズ(数字。データがないときは `-`)
+
+  ## ルール
+  - `status` と `size` は `int` にする。サイズが `-` なら `0`
+  - 行末の改行や前後の空白は無視する
+  - 行全体が形式に合わない場合(項目が足りない・余計な文字がある・ステータスが数字3桁でない等)は `None`
+
+  ## 例
+  ```python
+  >>> parse_access_log('127.0.0.1 - - [20/Oct/2026:10:15:32 +0900] "GET /index.html HTTP/1.1" 200 1534')
+  LogEntry(ip='127.0.0.1', method='GET', path='/index.html', status=200, size=1534)
+  ```
+starter_code: |
+  import re
+  from dataclasses import dataclass
+
+
+  @dataclass(frozen=True)
+  class LogEntry:
+      ip: str
+      method: str
+      path: str
+      status: int
+      size: int
+
+
+  def parse_access_log(line: str) -> LogEntry | None:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    split で区切ると、日時やリクエストの中の空白で崩れてしまいます。行全体の形を正規表現で表しましょう。
+  - >-
+    名前付きグループ (?P<名前>...) を使うと、取り出した値を match["名前"] で読めます。行全体に一致したかどうかは re.fullmatch で判定でき、パターンは re.compile でモジュールの定数にしておくのが定番です。\S+ は「空白以外の1文字以上」です。
+  - >-
+    手順:ip・method・path・status・size の名前付きグループを持つパターンを compile(日時は \[[^\]]+\]、status は \d{3}、size は \d+|-)→ line.strip() に fullmatch → None なら None を返す → int に変換して LogEntry を作る。
+solution: |
+  import re
+  from dataclasses import dataclass
+
+
+  @dataclass(frozen=True)
+  class LogEntry:
+      ip: str
+      method: str
+      path: str
+      status: int
+      size: int
+
+
+  LOG_PATTERN = re.compile(
+      r"(?P<ip>\S+) \S+ \S+ \[[^\]]+\] "
+      r'"(?P<method>[A-Z]+) (?P<path>\S+) [^"]+" '
+      r"(?P<status>\d{3}) (?P<size>\d+|-)"
+  )
+
+
+  def parse_access_log(line: str) -> LogEntry | None:
+      match = LOG_PATTERN.fullmatch(line.strip())
+      if match is None:
+          return None
+      size = match["size"]
+      return LogEntry(
+          ip=match["ip"],
+          method=match["method"],
+          path=match["path"],
+          status=int(match["status"]),
+          size=0 if size == "-" else int(size),
+      )
+php_note: |
+  PHPの `preg_match('/(?P<ip>\S+) .../', $line, $m)` と同じ名前付きグループが使えます。
+  違いは、Pythonでは区切り文字(`/.../`)を書かず、raw文字列 `r"..."` でバックスラッシュを
+  そのまま書く点です。行全体の一致は、PHPでは `^...$` を付けますが、Pythonでは
+  `re.fullmatch` を使うと意図が明確になります(`$` は末尾の改行の手前にも一致するので注意)。
+tags: [re, regex, dataclass]

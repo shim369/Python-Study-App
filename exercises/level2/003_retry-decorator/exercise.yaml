@@ -1,0 +1,72 @@
+id: l2-003-retry-decorator
+title: リトライするデコレータ
+level: 2
+topic: decorator
+kind: write
+grading: pytest
+description: |
+  ## やること
+  関数が例外で失敗したら、決まった回数まで呼び直すデコレータ `retry(times, exceptions)` を
+  実装してください。ネットワーク通信など「たまに失敗する処理」でよく使う形です。
+
+  ```python
+  @retry(times=3, exceptions=(ConnectionError,))
+  def fetch() -> str: ...
+  ```
+
+  ## ルール
+  - 関数は **最大 `times` 回** 呼ぶ(1回目 + 呼び直し `times - 1` 回)。成功したらその戻り値を返す
+  - 呼び直すのは `exceptions` に含まれる例外のときだけ。それ以外の例外はすぐにそのまま送出する
+  - `times` 回とも失敗したら、**最後の例外**をそのまま送出する
+  - デコレートした関数の引数(位置引数・キーワード引数)はそのまま渡す
+  - 関数名や docstring(`__name__` / `__doc__`)を元の関数のものに保つ
+  - `times` が 1 未満なら `retry(...)` を呼んだ時点で `ValueError` を送出する
+  - 待ち時間(sleep)は入れない
+
+  シグネチャの `[**P, R]` は「元の関数と同じ引数・戻り値の型を保つ」ための型パラメータです。
+starter_code: |
+  from collections.abc import Callable
+  from functools import wraps
+
+
+  def retry[**P, R](
+      times: int, exceptions: tuple[type[Exception], ...] = (Exception,)
+  ) -> Callable[[Callable[P, R]], Callable[P, R]]:
+      # ここに実装
+      raise NotImplementedError
+hints:
+  - >-
+    引数を取るデコレータは「retry(...) がデコレータを返し、デコレータが関数を包んだ wrapper を返す」の3段の関数になります。
+  - >-
+    wrapper の中で try / except exceptions を使って呼び直します。except には例外クラスのタプルをそのまま書けます。名前や docstring を保つには functools.wraps を使います。
+  - >-
+    手順:times をチェック → decorator(func) の中に @wraps(func) を付けた wrapper(*args, **kwargs) を定義 → 最後の1回を除いて try で呼び、成功なら return、exceptions なら次へ → ループ後に最後の1回を try なしで呼んで return(失敗すれば例外がそのまま伝わる)。
+solution: |
+  from collections.abc import Callable
+  from functools import wraps
+
+
+  def retry[**P, R](
+      times: int, exceptions: tuple[type[Exception], ...] = (Exception,)
+  ) -> Callable[[Callable[P, R]], Callable[P, R]]:
+      if times < 1:
+          raise ValueError("times は 1 以上にしてください")
+
+      def decorator(func: Callable[P, R]) -> Callable[P, R]:
+          @wraps(func)
+          def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+              for _ in range(times - 1):
+                  try:
+                      return func(*args, **kwargs)
+                  except exceptions:
+                      continue  # 呼び直す
+              return func(*args, **kwargs)  # 最後の1回は例外をそのまま伝える
+
+          return wrapper
+
+      return decorator
+php_note: |
+  PHPにはデコレータ構文がなく、同じことは高階関数(クロージャを受け取って返す関数)で書きます。
+  Pythonの `@retry(times=3)` は `fetch = retry(times=3)(fetch)` の糖衣構文です。
+  PHP 8 のアトリビュート `#[...]` は見た目が似ていますが、関数を包む機能はありません。
+tags: [decorator, closure, exception, typing]
