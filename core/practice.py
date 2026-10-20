@@ -5,8 +5,10 @@ UI(Streamlit)はこのクラスを session_state に置いて使うだけにし�
 """
 
 from dataclasses import dataclass
+from typing import Self
 
 from core.models import GradeResult
+from core.progress import ExerciseProgress, Status
 
 
 @dataclass
@@ -17,6 +19,19 @@ class PracticeState:
     passed: bool = False
     solution_revealed: bool = False
     last_result: GradeResult | None = None
+
+    @classmethod
+    def from_progress(cls, total_hints: int, progress: ExerciseProgress | None) -> Self:
+        """保存済みの進捗から状態を復元する(アプリを再起動しても続きから取り組める)。"""
+        if progress is None:
+            return cls(total_hints=total_hints)
+        return cls(
+            total_hints=total_hints,
+            hints_shown=min(progress.hints_used, total_hints),
+            attempts=progress.attempts,
+            passed=progress.status is Status.PASSED,
+            solution_revealed=progress.solution_viewed,
+        )
 
     def record(self, result: GradeResult) -> None:
         """採点結果を記録する。一度合格したら、後で不合格になっても合格扱いのまま。"""

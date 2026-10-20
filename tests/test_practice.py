@@ -1,8 +1,12 @@
+from datetime import UTC, datetime
+
 from core.models import CaseOutcome, GradeResult
 from core.practice import PracticeState
+from core.progress import ExerciseProgress
 
 PASSED = GradeResult(passed=True, cases=[CaseOutcome("t", True)])
 FAILED = GradeResult(passed=False, cases=[CaseOutcome("t", False, "NG")])
+T0 = datetime(2026, 10, 1, tzinfo=UTC)
 
 
 def test_hints_are_revealed_one_by_one_up_to_total() -> None:
@@ -35,3 +39,27 @@ def test_record_counts_attempts_and_keeps_passed() -> None:
     assert state.attempts == 2
     assert state.passed  # 一度合格したら合格のまま
     assert state.last_result is FAILED
+
+
+def test_from_progress_without_saved_data_is_fresh() -> None:
+    assert PracticeState.from_progress(3, None) == PracticeState(total_hints=3)
+
+
+def test_from_progress_restores_saved_state() -> None:
+    saved = ExerciseProgress(
+        "l1-001-x",
+        started_at=T0,
+        attempts=4,
+        hints_used=2,
+        solution_viewed=True,
+        first_passed_at=T0,
+    )
+    state = PracticeState.from_progress(3, saved)
+    assert (state.attempts, state.hints_shown, state.passed) == (4, 2, True)
+    assert state.solution_revealed
+    assert state.last_result is None  # 採点結果の詳細は保存していない
+
+
+def test_from_progress_caps_hints_when_exercise_has_fewer() -> None:
+    saved = ExerciseProgress("l1-001-x", started_at=T0, hints_used=5)
+    assert PracticeState.from_progress(3, saved).hints_shown == 3
