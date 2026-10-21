@@ -19,10 +19,11 @@ st.set_page_config(page_title="Python-Study-App", page_icon="🐍", layout="wide
 
 page = st.navigation(
     [
-        st.Page("pages/exercise.py", title="演習", icon="✍️", default=True),
-        st.Page("pages/dashboard.py", title="ダッシュボード", icon="📊"),
-        st.Page("pages/playground.py", title="自由に試す", icon="🧪"),
+        st.Page("pages/exercise.py", title="演習", default=True),
+        st.Page("pages/dashboard.py", title="ダッシュボード"),
+        st.Page("pages/playground.py", title="自由に試す"),
     ]
 )
 st.title("Python Study App")  # 全ページ共通の見出し(h1)。各ページの見出しは h2 にする
+st.space(30)  # h1 の下に余白(px)を空ける
 page.run()
