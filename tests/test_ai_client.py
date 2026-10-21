@@ -11,8 +11,8 @@ from ai.client import (
     GeminiClient,
     GeminiSettings,
     create_client,
-    describe_api_error,
     settings_from_env,
+    to_ai_error,
 )
 
 
@@ -46,8 +46,17 @@ def test_settings_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
         (api_error(400, "bad request", "INVALID_ARGUMENT"), "400 INVALID_ARGUMENT"),
     ],
 )
-def test_describe_api_error(error: errors.APIError, expected: str) -> None:
-    assert expected in describe_api_error(error)
+def test_to_ai_error(error: errors.APIError, expected: str) -> None:
+    assert expected in str(to_ai_error(error))
+
+
+def test_ai_error_message_in_english() -> None:
+    assert (
+        to_ai_error(api_error(429)).message("en").startswith("You've hit the free-tier usage limit")
+    )
+    assert (
+        AIError("ai_error.connection", name="X").message("en") == "Could not connect to the AI (X)"
+    )
 
 
 class FakeResponse:

@@ -1,6 +1,7 @@
 """AI フィードバック(段階的ヒント・不合格の原因解説・合格後のコードレビュー)。
 
-プロンプト文は prompts/ のテンプレートに置き、ここでは値を埋めて送るだけにする。
+プロンプト文は prompts/<言語>/ のテンプレートに置き、ここでは値を埋めて送るだけにする。
+画面が英語のときは英語のプロンプトを使い、AI の回答も英語にする。
 テンプレートは string.Template($name 形式)を使う。コード中の { } と衝突しないため。
 
 トークン節約のため、送るコードと実行結果は長さを制限し、
@@ -13,6 +14,7 @@ from pathlib import Path
 from string import Template
 
 from ai.client import AIError, TextGenerator, create_client
+from core.i18n import DEFAULT_LANG, Lang, Translator, translate
 from core.models import Exercise, GradeResult
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
@@ -22,30 +24,34 @@ MAX_CACHE_ENTRIES = 100
 HINT_LEVELS = 3
 
 
-def load_prompt(name: str) -> Template:
-    return Template((PROMPTS_DIR / f"{name}.md").read_text(encoding="utf-8"))
+def load_prompt(name: str, lang: Lang = DEFAULT_LANG) -> Template:
+    return Template((PROMPTS_DIR / lang / f"{name}.md").read_text(encoding="utf-8"))
 
 
-def clip(text: str, limit: int) -> str:
+def clip(text: str, limit: int, lang: Lang = DEFAULT_LANG) -> str:
     """長すぎる入力は先頭だけ送る(切ったことは AI にも分かるようにする)。"""
     if len(text) <= limit:
         return text
-    return text[:limit] + f"\n... (以下 {len(text) - limit} 文字省略)"
+    return text[:limit] + "\n" + translate(lang, "ai_input.clipped", count=len(text) - limit)
 
 
-def summarize_result(result: GradeResult | None) -> str:
+def summarize_result(result: GradeResult | None, lang: Lang = DEFAULT_LANG) -> str:
     """採点結果を、AI に渡す短いテキストにまとめる。"""
+    t = Translator(lang)
     if result is None:
-        return "(まだ実行していません)"
-    lines = ["合格" if result.passed else f"不合格(エラー種別: {result.error_type or '不明'})"]
+        return t("ai_input.not_run")
+    if result.passed:
+        lines = [t("ai_input.passed")]
+    else:
+        lines = [t("ai_input.failed", error_type=result.error_type or t("ai_input.unknown"))]
     for case in result.cases:
         if not case.passed:
             lines.append(f"- {case.name}: {case.message}")
             if case.details:
                 lines.append(case.details)
     if result.stderr.strip():
-        lines.append(f"標準エラー:\n{result.stderr.strip()}")
-    return clip("\n".join(lines), MAX_RESULT_CHARS)
+        lines.append(f"{t('ai_input.stderr')}:\n{result.stderr.strip()}")
+    return clip("\n".join(lines), MAX_RESULT_CHARS, lang)
 
 
 @dataclass(frozen=True)
@@ -59,58 +65,73 @@ class Feedback:
 class FeedbackService:
     def __init__(self, generator: TextGenerator) -> None:
         self._generator = generator
-        self._system = load_prompt("system").template
         self._cache: dict[str, str] = {}
 
     def hint(
-        self, exercise: Exercise, code: str, level: int, last_result: GradeResult | None
+        self,
+        exercise: Exercise,
+        code: str,
+        level: int,
+        last_result: GradeResult | None,
+        lang: Lang = DEFAULT_LANG,
     ) -> Feedback:
         if not 1 <= level <= HINT_LEVELS:
             raise ValueError(f"ヒントの段階は 1〜{HINT_LEVELS} です: {level}")
         return self._ask(
             "hint",
+            lang,
             level=str(level),
             title=exercise.title,
             description=exercise.description,
-            code=clip(code, MAX_CODE_CHARS),
-            result=summarize_result(last_result),
+            code=clip(code, MAX_CODE_CHARS, lang),
+            result=summarize_result(last_result, lang),
         )
 
-    def explain_failure(self, exercise: Exercise, code: str, result: GradeResult) -> Feedback:
+    def explain_failure(
+        self, exercise: Exercise, code: str, result: GradeResult, lang: Lang = DEFAULT_LANG
+    ) -> Feedback:
         return self._ask(
             "explain_failure",
+            lang,
             title=exercise.title,
             description=exercise.description,
-            code=clip(code, MAX_CODE_CHARS),
-            result=summarize_result(result),
+            code=clip(code, MAX_CODE_CHARS, lang),
+            result=summarize_result(result, lang),
         )
 
-    def review(self, exercise: Exercise, code: str) -> Feedback:
+    def review(self, exercise: Exercise, code: str, lang: Lang = DEFAULT_LANG) -> Feedback:
         return self._ask(
             "review",
+            lang,
             title=exercise.title,
             description=exercise.description,
-            code=clip(code, MAX_CODE_CHARS),
+            code=clip(code, MAX_CODE_CHARS, lang),
             solution=exercise.solution,
         )
 
-    def free_review(self, code: str, output: str) -> Feedback:
+    def free_review(self, code: str, output: str, lang: Lang = DEFAULT_LANG) -> Feedback:
         """お題のないコードのレビュー(「自由に試す」ページ用)。output は実行結果の要約。"""
         return self._ask(
             "free_review",
-            code=clip(code, MAX_CODE_CHARS),
-            output=clip(output, MAX_RESULT_CHARS) if output else "(まだ実行していません)",
+            lang,
+            code=clip(code, MAX_CODE_CHARS, lang),
+            output=clip(output, MAX_RESULT_CHARS, lang)
+            if output
+            else translate(lang, "ai_input.not_run"),
         )
 
-    def _ask(self, prompt_name: str, **values: str) -> Feedback:
-        prompt = load_prompt(prompt_name).substitute(values)
-        key = hashlib.sha256(prompt.encode()).hexdigest()
+    def _ask(self, prompt_name: str, lang: Lang, **values: str) -> Feedback:
+        """lang のプロンプトで AI に聞く(回答もその言語になる)。"""
+        system = load_prompt("system", lang).template
+        prompt = load_prompt(prompt_name, lang).substitute(values)
+        # 同じ内容でも言語が違えば system が違う(= 別の回答)ので、キャッシュのキーに含める
+        key = hashlib.sha256(f"{system}\n{prompt}".encode()).hexdigest()
         if key in self._cache:
             return Feedback(text=self._cache[key])
         try:
-            text = self._generator.generate(self._system, prompt)
+            text = self._generator.generate(system, prompt)
         except AIError as e:  # ログは client 側で記録済み。画面に出すメッセージだけ返す
-            return Feedback(error=str(e))
+            return Feedback(error=e.message(lang))
 
         if len(self._cache) >= MAX_CACHE_ENTRIES:
             self._cache.pop(next(iter(self._cache)))  # いちばん古いものを捨てる

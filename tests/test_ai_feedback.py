@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from ai.client import AIError
@@ -9,6 +11,7 @@ from ai.feedback import (
     load_prompt,
     summarize_result,
 )
+from core.i18n import LANGUAGES, Lang, translate
 from core.loader import load_all
 from core.models import CaseOutcome, GradeResult
 
@@ -35,9 +38,20 @@ class FakeGenerator:
         return f"回答{len(self.calls)}"
 
 
-@pytest.mark.parametrize("name", ["system", "hint", "explain_failure", "review"])
-def test_prompt_templates_exist(name: str) -> None:
-    assert (PROMPTS_DIR / f"{name}.md").read_text(encoding="utf-8").strip()
+@pytest.mark.parametrize("lang", LANGUAGES)
+@pytest.mark.parametrize("name", ["system", "hint", "explain_failure", "review", "free_review"])
+def test_prompt_templates_exist(name: str, lang: str) -> None:
+    assert (PROMPTS_DIR / lang / f"{name}.md").read_text(encoding="utf-8").strip()
+
+
+@pytest.mark.parametrize("name", ["hint", "explain_failure", "review", "free_review"])
+def test_prompt_placeholders_match_between_languages(name: str) -> None:
+    """英語版のプロンプトにも、同じ $変数 が揃っていること(足りないと substitute で落ちる)。"""
+
+    def placeholders(lang: Lang) -> set[str]:
+        return set(re.findall(r"\$(\w+)", load_prompt(name, lang).template))
+
+    assert placeholders("en") == placeholders("ja")
 
 
 def test_hint_prompt_contains_level_code_and_result() -> None:
@@ -92,12 +106,32 @@ def test_same_request_is_cached() -> None:
     assert len(fake.calls) == 2
 
 
+def test_english_uses_english_prompts() -> None:
+    """英語表示のときは英語のプロンプトで聞く。言語が違えば別の回答としてキャッシュする。"""
+    fake = FakeGenerator()
+    service = FeedbackService(fake)
+    service.explain_failure(EXERCISE, "x = 1", FAILED)
+    service.explain_failure(EXERCISE, "x = 1", FAILED, lang="en")
+    assert len(fake.calls) == 2
+    system, prompt = fake.calls[1]
+    assert system == load_prompt("system", "en").template
+    assert "Answer in English" in system
+    assert "Failed (error type: AssertionError)" in prompt  # 実行結果の要約も英語
+
+
+def test_error_message_follows_lang() -> None:
+    service = FeedbackService(FakeGenerator(error="ai_error.rate_limit"))
+    assert service.review(EXERCISE, "x = 1", lang="en").error == translate(
+        "en", "ai_error.rate_limit"
+    )
+
+
 def test_error_is_returned_not_raised_and_not_cached() -> None:
-    fake = FakeGenerator(error="上限です")
+    fake = FakeGenerator(error="ai_error.rate_limit")
     service = FeedbackService(fake)
     feedback = service.review(EXERCISE, "x = 1")
     assert feedback.text is None
-    assert feedback.error == "上限です"
+    assert feedback.error == translate("ja", "ai_error.rate_limit")
 
     fake.error = None
     assert service.review(EXERCISE, "x = 1").text is not None  # 失敗はキャッシュしない
@@ -114,6 +148,11 @@ def test_long_code_is_clipped() -> None:
 def test_clip_keeps_short_text() -> None:
     assert clip("abc", 3) == "abc"
     assert clip("abcd", 3).startswith("abc\n")
+
+
+def test_summarize_result_in_english() -> None:
+    assert summarize_result(None, "en") == "(not run yet)"
+    assert summarize_result(GradeResult(passed=True), "en") == "Passed"
 
 
 def test_summarize_result() -> None:

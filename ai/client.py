@@ -2,7 +2,8 @@
 
 - 設定は環境変数(.env)から読む。APIキーが無ければ create_client() は None を返し、
   呼び出し側は「AI機能なし」で動き続ける
-- API のエラーは AIError(学習者に見せてよいメッセージ付き)に変換する
+- API のエラーは AIError(学習者に見せてよいメッセージ付き)に変換する。
+  メッセージは locales/ の ai_error.* にあり、画面の言語で表示できる
 """
 
 import logging
@@ -13,6 +14,8 @@ from typing import Protocol
 from google import genai
 from google.genai import errors, types
 
+from core.i18n import DEFAULT_LANG, Lang, translate
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "gemini-3.8-flash"
@@ -20,7 +23,18 @@ TIMEOUT_MS = 60_000
 
 
 class AIError(Exception):
-    """AI の呼び出しに失敗した。メッセージはそのまま画面に表示できる。"""
+    """AI の呼び出しに失敗した。message(lang) で画面に表示できるメッセージになる。
+
+    key は locales/ の文言のキー(例: "ai_error.rate_limit")。str(e) は日本語(ログ用)。
+    """
+
+    def __init__(self, key: str, **values: object) -> None:
+        self.key = key
+        self.values = values
+        super().__init__(self.message(DEFAULT_LANG))
+
+    def message(self, lang: Lang) -> str:
+        return translate(lang, self.key, **self.values)
 
 
 class TextGenerator(Protocol):
@@ -60,28 +74,28 @@ class GeminiClient:
             )
         except errors.APIError as e:
             logger.exception("Gemini API がエラーを返しました")
-            raise AIError(describe_api_error(e)) from e
+            raise to_ai_error(e) from e
         except Exception as e:  # 通信エラーなど。AI機能だけを失敗扱いにしてアプリは続ける
             logger.exception("Gemini API の呼び出しに失敗しました")
-            raise AIError(f"AI に接続できませんでした({type(e).__name__})") from e
+            raise AIError("ai_error.connection", name=type(e).__name__) from e
 
         if not response.text:
             logger.error("Gemini API の応答が空でした: %s", response)
-            raise AIError("AI から回答が得られませんでした。少し時間をおいて試してください。")
+            raise AIError("ai_error.empty")
         return response.text
 
 
-def describe_api_error(error: errors.APIError) -> str:
-    """HTTPステータスから、学習者が次に何をすればよいか分かるメッセージを作る。"""
+def to_ai_error(error: errors.APIError) -> AIError:
+    """HTTPステータスから、学習者が次に何をすればよいか分かるメッセージの AIError を作る。"""
     if error.code == 429:
-        return "無料枠の利用上限に達しました。しばらく待つか、GEMINI_MODEL を変えて試してください。"
+        return AIError("ai_error.rate_limit")
     if error.code in (401, 403) or (error.code == 400 and "API key" in (error.message or "")):
-        return "APIキーが無効です。.env の GEMINI_API_KEY を確認してください。"
+        return AIError("ai_error.invalid_key")
     if error.code == 404:
-        return "モデルが見つかりません。.env の GEMINI_MODEL を確認してください。"
+        return AIError("ai_error.model_not_found")
     if error.code >= 500:
-        return "AI サービス側で一時的なエラーが起きました。少し時間をおいて試してください。"
-    return f"AI の呼び出しに失敗しました({error.code} {error.status})"
+        return AIError("ai_error.server_error")
+    return AIError("ai_error.other", code=error.code, status=error.status)
 
 
 def create_client() -> GeminiClient | None:
