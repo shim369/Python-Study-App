@@ -64,3 +64,46 @@ php_note: |
   モックライブラリに頼らずにテストできます。
   また Python の比較は `5 <= hour < 11` のように連鎖して書けます。
 tags: [testing, datetime, design, bugfix]
+en:
+  title: Refactoring for testability (injecting the clock)
+  description: |
+    ## Situation
+    There is a function `greeting(name)` that returns a greeting for the time of day. It has these problems:
+
+    1. It calls `datetime.now()` directly inside the function, so you can't write tests like
+       "at 7 a.m. it should return this" (the result changes depending on when the tests run)
+    2. A user reported: "It said good morning to me at exactly 11:00"
+
+    ## Task
+    Fix the starter code.
+
+    ## Specification
+    - Change the signature to `greeting(name: str, now: datetime | None = None) -> str`
+      - When `now` is given, use that time. When it's omitted (`None`), use the current time
+    - Time ranges and greetings (`h` is the hour; ranges are "from (inclusive) to (exclusive)").
+      Return these Japanese strings exactly (the tests check them):
+      - 5:00–11:00: `おはようございます、{name}さん` ("Good morning, {name}")
+      - 11:00–18:00: `こんにちは、{name}さん` ("Hello, {name}")
+      - Otherwise (18:00–5:00 the next day): `こんばんは、{name}さん` ("Good evening, {name}")
+
+    ## Example
+    ```python
+    >>> greeting("太郎", now=datetime(2026, 10, 20, 11, 0))
+    'こんにちは、太郎さん'
+    ```
+  hints:
+    - >-
+      It can't be tested because "the function fetches the current time by itself". If the time can be passed in from
+      outside, tests can specify any time they like. Also review the boundary comparisons.
+    - >-
+      Make the default value of the argument None and use datetime.now() only when it's None (writing datetime.now()
+      directly as the default would freeze it at the time of definition). "From ... to (exclusive)" can be written as 5 <= hour < 11.
+    - >-
+      Steps: add the argument now: datetime | None = None → if now is None, assign datetime.now() → hour = now.hour
+      → check 5 <= hour < 11, then 11 <= hour < 18, and return the greeting.
+  php_note: |
+    In PHP too, calling `new DateTime()` or `time()` directly inside a function makes testing hard,
+    and you solve it with Carbon's `Carbon::setTestNow()` or by injecting a Clock interface.
+    The idea is the same in Python: if external dependencies (time, random numbers, networking, etc.) can be passed in as arguments,
+    you can test without relying on a mocking library.
+    Also, Python comparisons can be chained, as in `5 <= hour < 11`.

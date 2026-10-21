@@ -56,3 +56,48 @@ php_note: |
   `tag=web&tag=api` にします(多くのAPIはこちらの形式を期待します)。
   空白の扱い(`+` か `%20` か)は PHP の `PHP_QUERY_RFC3986` オプションと同じ違いです。
 tags: [http, urllib, url]
+en:
+  title: Building a URL with a query (urllib.parse)
+  description: |
+    ## Task
+    Implement a function `build_url(base, path, params=None)` that builds a URL for calling an API.
+
+    ## Rules
+    - Join `base` and `path` so that there is **exactly one** `/` between them
+      (`base` may or may not end with `/`, and `path` may or may not start with `/`)
+    - Turn `params` into a query string and append it after `?`, in the order of `params`
+      - If a value is an `int`, convert it to a string
+      - If a value is a list, repeat the same key once per element (`tag=a&tag=b`)
+      - Leave out keys whose value is `None`
+      - URL-encode keys and values: a space becomes `%20`, `/` becomes `%2F`, and Japanese text becomes UTF-8 like `%E6%97%A5...`
+    - If there is nothing to put in the query (`params` is `None`, empty, or all `None`), don't add `?`
+
+    ## Example
+    ```python
+    >>> build_url("https://api.example.com/", "/v1/search", {"q": "python 3", "page": 2, "tag": ["web", "api"]})
+    'https://api.example.com/v1/search?q=python%203&page=2&tag=web&tag=api'
+    ```
+  hints:
+    - >-
+      You don't need to write query string encoding yourself. The standard library's urllib.parse has a function
+      that builds a query string from a dict.
+    - >-
+      urlencode(dict, doseq=True) turns list values into repetitions of the same key. By default spaces become +,
+      so pass quote_via=quote to get %20. The slashes at the ends can be normalized with rstrip("/") and lstrip("/").
+    - >-
+      Steps: join base.rstrip("/") and path.lstrip("/") with "/" → drop items whose value is None with a dict comprehension
+      → urlencode(..., doseq=True, quote_via=quote) → if the result isn't an empty string, join it with "?" and return.
+  php_note: |
+    The equivalent of PHP's `http_build_query()` is `urllib.parse.urlencode()`.
+    However, PHP turns lists into `tag[0]=web&tag[1]=api`, while Python with `doseq=True` produces
+    `tag=web&tag=api` (the format most APIs expect).
+    The handling of spaces (`+` or `%20`) is the same difference as PHP's `PHP_QUERY_RFC3986` option.
+  starter_code: |
+    from urllib.parse import quote, urlencode
+
+
+    def build_url(
+        base: str, path: str, params: dict[str, str | int | list[str] | None] | None = None
+    ) -> str:
+        # Implement here
+        raise NotImplementedError

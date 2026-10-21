@@ -42,3 +42,41 @@ php_note: |
   連続する空白・改行をまとめて区切りとして扱うので、その心配がありません。
   `trim($word, '.,!?')` に相当するのが `word.strip('.,!?')` です。
 tags: [dict, string, collections]
+en:
+  title: Word frequency
+  description: |
+    ## Task
+    Implement a function `word_frequency(text)` that counts how many times each word appears
+    in the string `text` and returns a dict of `{word: count}`.
+
+    ## Rules
+    - Words are separated by whitespace (spaces, tabs, newlines)
+    - Case-insensitive (keys must be **lowercase**)
+    - Remove the symbols `.` `,` `!` `?` from the **start and end** of each word (`"hello!"` → `"hello"`)
+    - Don't count words that become empty after removing the symbols
+    - If `text` is an empty string, return an empty dict `{}`
+
+    ## Example
+    ```python
+    >>> word_frequency("The cat and the hat.")
+    {'the': 2, 'cat': 1, 'and': 1, 'hat': 1}
+    ```
+  hints:
+    - >-
+      Think of it in three steps: split into words → clean up each word → count.
+      Calling split with no arguments is good at splitting on whitespace.
+    - >-
+      To remove symbols from both ends, you can pass str.strip "the set of characters to remove".
+      For counting, use dict.get(key, 0), or look for the "dict made just for counting" in the collections module.
+    - >-
+      Steps: loop over text.lower().split() → strip(".,!?") each word → continue if it's empty
+      → add 1 to the dict value. Return the dict at the end. With Counter, the counting part becomes one line.
+  php_note: |
+    In PHP you'd write something like `array_count_values(explode(' ', strtolower($text)))`,
+    but `explode(' ', ...)` produces empty elements for consecutive spaces. Python's `split()`
+    with no arguments treats runs of whitespace and newlines as a single separator, so that's not a problem.
+    The equivalent of `trim($word, '.,!?')` is `word.strip('.,!?')`.
+  starter_code: |
+    def word_frequency(text: str) -> dict[str, int]:
+        # Implement here
+        raise NotImplementedError

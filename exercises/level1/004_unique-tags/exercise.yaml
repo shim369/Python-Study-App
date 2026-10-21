@@ -47,3 +47,38 @@ php_note: |
   PHPでは `isset($seen[$key])` を「集合」の代わりに使いますが、Pythonには専用の型 `set` があり、
   `key in seen` の判定は要素数に関係なくほぼ一定時間で済みます。
 tags: [set, list, string]
+en:
+  title: Removing duplicate tags
+  description: |
+    ## Task
+    Implement a function `unique_tags(tags)` that cleans up a list `tags` of blog post tags.
+
+    ## Rules
+    - Remove whitespace from both ends of each tag
+    - Drop tags that become an empty string after removing whitespace
+    - Tags that differ only in case are **the same tag**; keep **the spelling that appears first**
+    - Keep the order in which tags first appear
+    - Don't modify the list passed as the argument
+
+    ## Example
+    ```python
+    >>> unique_tags(["Python", " php ", "python", "PHP", "", "Go"])
+    ['Python', 'php', 'Go']
+    ```
+  hints:
+    - >-
+      Besides the result list, prepare a container for quickly checking "have I already seen this tag?".
+    - >-
+      A set is good at checking "is it included?" (faster than a list). Use the lowercased string
+      as the key for comparison.
+    - >-
+      Steps: prepare a set of seen keys and a result list → strip each tag → skip if empty →
+      if the lower() key is not in the set, add it to the set and append the tag to the result → return the result.
+  php_note: |
+    It's close to PHP's `array_unique()`, but to ignore case you build the comparison key yourself.
+    In PHP you'd use `isset($seen[$key])` as a stand-in for a "set", but Python has a dedicated type `set`,
+    and checking `key in seen` takes roughly constant time regardless of the number of elements.
+  starter_code: |
+    def unique_tags(tags: list[str]) -> list[str]:
+        # Implement here
+        raise NotImplementedError

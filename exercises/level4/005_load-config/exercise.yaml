@@ -135,3 +135,72 @@ php_note: |
   元の例外を連結する書き方で、トレースバックに両方が表示されます。
   また `true` が整数として通ってしまう問題(`bool` は `int` のサブクラス)はPythonならではの落とし穴です。
 tags: [json, validation, exception, dataclass]
+en:
+  title: Loading and validating a config file (json)
+  description: |
+    ## Task
+    Implement a function `load_config(text)` that reads a config text in JSON format, validates it and turns it
+    into a `Config`. Invalid content becomes a `ConfigError` with a message that explains the cause.
+    (`Config` and `ConfigError` are already defined in the starter code)
+
+    ## Config format
+    ```json
+    {"host": "localhost", "port": 8080, "debug": true, "allowed_hosts": ["a.example", "b.example"]}
+    ```
+    | Key | Required | Type / condition | Default |
+    |---|---|---|---|
+    | `host` | ✓ | non-empty string | - |
+    | `port` | ✓ | integer from 1 to 65535 (`true` / `false` and `8080.0` are not allowed) | - |
+    | `debug` | | boolean | `False` |
+    | `allowed_hosts` | | list of strings → a tuple in `Config` | `()` |
+
+    ## What counts as an error (raise `ConfigError`)
+    - Not readable as JSON → chain the original exception (`json.JSONDecodeError`) as the cause (`raise ... from e`)
+    - The top level isn't an object (`{...}`)
+    - There's a key not in the table above (include that key name in the message)
+    - A required key is missing, or a type or condition is wrong (include that key name in the message)
+
+    ## Example
+    ```python
+    >>> load_config('{"host": "localhost", "port": 8080}')
+    Config(host='localhost', port=8080, debug=False, allowed_hosts=())
+    >>> load_config('{"host": "localhost", "port": "8080"}')
+    ConfigError: (a message containing "port")
+    ```
+  hints:
+    - >-
+      Work in the order "read the JSON" → "check the shape" → "build the Config", raising ConfigError as soon as you
+      find a problem. Splitting the per-key checks into small functions makes it easier to read.
+    - >-
+      json.loads raises json.JSONDecodeError on failure. Use isinstance for type checks, but note that in Python bool is
+      a subclass of int, so isinstance(True, int) is True. Unknown keys can be found with "set of the dict's keys - set of allowed keys".
+    - >-
+      Steps: json.loads in a try; on JSONDecodeError, raise ConfigError(...) from e → error unless isinstance(data, dict)
+      → error if data.keys() - allowed keys isn't empty → take out and validate host, port, debug and allowed_hosts in order
+      (exclude bool for port with type(port) is int) → return Config(...).
+  php_note: |
+    PHP's `json_decode()` just returns `null` on failure (unless you pass `JSON_THROW_ON_ERROR`),
+    but Python's `json.loads()` always raises an exception.
+    `raise ConfigError(...) from e` chains the original exception, like PHP's `new ConfigException($msg, 0, $previous)`,
+    and both appear in the traceback.
+    Also, `true` slipping through as an integer (`bool` is a subclass of `int`) is a pitfall unique to Python.
+  starter_code: |
+    import json
+    from dataclasses import dataclass
+
+
+    class ConfigError(Exception):
+        """The config content is invalid."""
+
+
+    @dataclass(frozen=True)
+    class Config:
+        host: str
+        port: int
+        debug: bool = False
+        allowed_hosts: tuple[str, ...] = ()
+
+
+    def load_config(text: str) -> Config:
+        # Implement here
+        raise NotImplementedError

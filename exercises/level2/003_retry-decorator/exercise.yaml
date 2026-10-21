@@ -70,3 +70,50 @@ php_note: |
   Pythonの `@retry(times=3)` は `fetch = retry(times=3)(fetch)` の糖衣構文です。
   PHP 8 のアトリビュート `#[...]` は見た目が似ていますが、関数を包む機能はありません。
 tags: [decorator, closure, exception, typing]
+en:
+  title: Retry decorator
+  description: |
+    ## Task
+    Implement a decorator `retry(times, exceptions)` that calls a function again, up to a fixed number of times,
+    when it fails with an exception. This pattern is common for "sometimes-failing" operations such as network calls.
+
+    ```python
+    @retry(times=3, exceptions=(ConnectionError,))
+    def fetch() -> str: ...
+    ```
+
+    ## Rules
+    - Call the function **at most `times` times** (the first call + `times - 1` retries). On success, return its return value
+    - Only retry for exceptions included in `exceptions`. Any other exception is raised immediately as is
+    - If all `times` calls fail, raise **the last exception** as is
+    - Pass the decorated function's arguments (positional and keyword) through unchanged
+    - Keep the original function's name and docstring (`__name__` / `__doc__`)
+    - If `times` is less than 1, raise `ValueError` when `retry(...)` is called
+    - Don't add any waiting (sleep)
+
+    The `[**P, R]` in the signature are type parameters that "keep the same argument and return types as the original function".
+  hints:
+    - >-
+      A decorator that takes arguments is three levels of functions: "retry(...) returns a decorator, and the decorator
+      returns a wrapper that wraps the function".
+    - >-
+      Inside the wrapper, retry using try / except exceptions. You can write a tuple of exception classes directly
+      in except. Use functools.wraps to keep the name and docstring.
+    - >-
+      Steps: check times → inside decorator(func), define wrapper(*args, **kwargs) with @wraps(func) → call in a try
+      for all but the last attempt, return on success, move on for exceptions → after the loop, call the last attempt
+      without try and return (if it fails, the exception propagates as is).
+  php_note: |
+    PHP has no decorator syntax; you'd write the same thing with a higher-order function (a function that takes and returns a closure).
+    Python's `@retry(times=3)` is syntactic sugar for `fetch = retry(times=3)(fetch)`.
+    PHP 8 attributes `#[...]` look similar, but they can't wrap a function.
+  starter_code: |
+    from collections.abc import Callable
+    from functools import wraps
+
+
+    def retry[**P, R](
+        times: int, exceptions: tuple[type[Exception], ...] = (Exception,)
+    ) -> Callable[[Callable[P, R]], Callable[P, R]]:
+        # Implement here
+        raise NotImplementedError

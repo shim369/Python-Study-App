@@ -94,3 +94,65 @@ php_note: |
   そのまま書く点です。行全体の一致は、PHPでは `^...$` を付けますが、Pythonでは
   `re.fullmatch` を使うと意図が明確になります(`$` は末尾の改行の手前にも一致するので注意)。
 tags: [re, regex, dataclass]
+en:
+  title: Parsing access logs (re)
+  description: |
+    ## Task
+    Implement a function `parse_access_log(line)` that parses one line of a web server access log and returns
+    it as a `LogEntry`. Return `None` for lines that don't match the format.
+
+    ## Log format
+    ```
+    127.0.0.1 - - [20/Oct/2026:10:15:32 +0900] "GET /index.html HTTP/1.1" 200 1534
+    ```
+    Space-separated, from left to right:
+    1. IP address (a string without spaces)
+    2. Two fields such as `-` (strings without spaces; not used)
+    3. Date and time enclosed in `[` and `]` (not used)
+    4. The request enclosed in `"`: `method (uppercase letters) path (no spaces) protocol`
+    5. Status code (3 digits)
+    6. Response size (digits, or `-` when there's no data)
+
+    ## Rules
+    - Make `status` and `size` `int`s. If the size is `-`, use `0`
+    - Ignore a trailing newline and surrounding whitespace
+    - If the whole line doesn't match the format (missing fields, extra characters, a status that isn't 3 digits, etc.), return `None`
+
+    ## Example
+    ```python
+    >>> parse_access_log('127.0.0.1 - - [20/Oct/2026:10:15:32 +0900] "GET /index.html HTTP/1.1" 200 1534')
+    LogEntry(ip='127.0.0.1', method='GET', path='/index.html', status=200, size=1534)
+    ```
+  hints:
+    - >-
+      Splitting with split breaks on the spaces inside the date and the request. Describe the shape of
+      the whole line with a regular expression.
+    - >-
+      With named groups (?P<name>...), you can read the captured values as match["name"]. re.fullmatch tells you whether
+      the whole line matched, and compiling the pattern into a module constant with re.compile is the usual style.
+      \S+ means "one or more non-whitespace characters".
+    - >-
+      Steps: compile a pattern with named groups ip, method, path, status and size (date as \[[^\]]+\], status as \d{3},
+      size as \d+|-) → fullmatch it against line.strip() → return None if it's None → convert to int and build a LogEntry.
+  php_note: |
+    You can use the same named groups as in PHP's `preg_match('/(?P<ip>\S+) .../', $line, $m)`.
+    The difference is that Python has no delimiters (`/.../`), and you write backslashes as is in a raw string `r"..."`.
+    To match the whole line, PHP uses `^...$`, while in Python `re.fullmatch` makes the intent clear
+    (watch out: `$` also matches just before a trailing newline).
+  starter_code: |
+    import re
+    from dataclasses import dataclass
+
+
+    @dataclass(frozen=True)
+    class LogEntry:
+        ip: str
+        method: str
+        path: str
+        status: int
+        size: int
+
+
+    def parse_access_log(line: str) -> LogEntry | None:
+        # Implement here
+        raise NotImplementedError

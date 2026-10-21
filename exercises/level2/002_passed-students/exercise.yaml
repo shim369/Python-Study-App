@@ -45,3 +45,43 @@ php_note: |
   タプル `(-平均点, 名前)` を返すと「平均点の降順 → 名前の昇順」の複合ソートになります
   (PHPの `<=>` を連ねる比較関数を書く必要はありません)。
 tags: [comprehension, dict, sorted]
+en:
+  title: Students who passed (comprehensions)
+  description: |
+    ## Task
+    Implement a function `passed_students(scores, threshold)` that takes a dict of scores per student,
+    `scores` (`{name: [score, ...]}`), and returns a list of the names of students whose average score
+    is `threshold` or higher.
+
+    ## Rules
+    - The average is `sum / count` (compare it as a float; don't round)
+    - Students with an empty score list are excluded (they don't pass)
+    - Sort by **average score, highest first**. For equal averages, sort by **name in ascending order**
+    - Don't modify the dict or lists passed as arguments
+
+    ## Example
+    ```python
+    >>> passed_students({"sato": [80, 90], "suzuki": [60, 70], "tanaka": [100]}, 70)
+    ['tanaka', 'sato']
+    ```
+
+    You may use loops, but dict comprehensions, list comprehensions and the `key` of `sorted`
+    let you write it concisely.
+  hints:
+    - >-
+      First build a dict of "name → average score", then think in the order "select those who passed" → "sort them".
+    - >-
+      A dict comprehension {k: v for ... if ...} can compute the averages while excluding empty lists.
+      For sorting, pass sorted's key argument a function that returns "a tuple of the values to compare".
+    - >-
+      Steps: build the averages dict with a comprehension (excluding empty points) → collect the names whose
+      average is at least threshold with a comprehension → return sorted with a lambda key returning (-average, name).
+  php_note: |
+    In PHP you'd combine `array_filter` and `usort`.
+    Python's `sorted(key=...)` only needs a function that returns "the value to compare by",
+    and returning the tuple `(-average, name)` gives a compound sort of "average descending → name ascending"
+    (no need to write a comparison function chaining PHP's `<=>`).
+  starter_code: |
+    def passed_students(scores: dict[str, list[int]], threshold: float) -> list[str]:
+        # Implement here
+        raise NotImplementedError

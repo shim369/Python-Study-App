@@ -73,3 +73,53 @@ php_note: |
   独自例外は PHP と同様に既存の例外を継承して作りますが、`ValueError` など意味の近い
   組み込み例外を親にすると、呼び出し側が広い単位でも捕まえられます。
 tags: [dataclass, exception, dunder]
+en:
+  title: A value object for money
+  description: |
+    ## Task
+    Implement a value object `Money` that represents an amount and a currency, and an exception
+    `CurrencyMismatchError` raised when the currencies differ.
+
+    ## `Money` specification
+    - Created with `Money(amount, currency)`. `amount` is an integer (may be negative), `currency` is a currency code
+    - Raise `ValueError` unless `currency` is **exactly 3 uppercase ASCII letters (A–Z)** (e.g. `"JPY"`, `"USD"`)
+    - **Immutable** (assigning to `amount` etc. after creation raises an exception)
+    - Equal (`==`) when the amount and currency are the same. Can be put in a `set` or used as a dict key
+    - Supports addition with `+`. The result is a new `Money`
+    - Adding values with different currencies raises `CurrencyMismatchError`
+    - `str(money)` is the amount with thousands separators and the currency (e.g. `"1,200 JPY"`, `"-500 USD"`)
+
+    ## `CurrencyMismatchError` specification
+    - Make it a subclass of `ValueError` (so `except ValueError` can catch it too)
+    - Include both currency codes in the message
+
+    ## Example
+    ```python
+    >>> str(Money(1000, "JPY") + Money(200, "JPY"))
+    '1,200 JPY'
+    >>> Money(1, "JPY") + Money(1, "USD")
+    CurrencyMismatchError: (a message containing JPY and USD)
+    ```
+  hints:
+    - >-
+      "Immutable, compared by value, hashable" can all be achieved with one dataclass option.
+      A custom exception is made by inheriting from an existing exception class.
+    - >-
+      @dataclass(frozen=True) gives you assignment protection plus __eq__ / __hash__. Validate on creation in
+      __post_init__, define addition in __add__ and string conversion in __str__. Thousands separators can be done
+      with the f-string format spec {value:,}.
+    - >-
+      Steps: define class CurrencyMismatchError(ValueError) → declare amount and currency in a frozen dataclass →
+      in __post_init__, raise ValueError unless "len is 3, isascii, isalpha and isupper" all hold (isascii rules out
+      full-width letters) → in __add__, compare currencies: raise CurrencyMismatchError if they differ, otherwise
+      return a new Money → define __str__.
+  php_note: |
+    Something close to PHP 8.2's `readonly class` + constructor promotion comes with the single line
+    `@dataclass(frozen=True)` (and `__eq__` and `__hash__` are generated automatically).
+    Operator overloading (`__add__`) doesn't exist in PHP, and it lets you write value objects naturally.
+    Custom exceptions inherit from existing ones as in PHP, but using a built-in exception with a similar meaning,
+    such as `ValueError`, as the parent lets callers catch it at a broader level too.
+  starter_code: |
+    from dataclasses import dataclass
+
+    # Implement CurrencyMismatchError and Money here

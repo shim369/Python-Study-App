@@ -1,0 +1,159 @@
+# 画面に表示する文言(日本語)。キーは en.yaml と揃えること(tests/test_i18n.py で確認している)
+# 値の {name} は実行時に埋め込まれる(str.format)
+
+nav:
+  exercise: 演習
+  dashboard: ダッシュボード
+  playground: 自由に試す
+
+common:
+  run: ▶ 実行
+  running: 実行中...
+  timeout: ⏱ タイムアウトしました。無限ループや重すぎる処理がないか確認しましょう。
+  truncated: 出力が多すぎたため、途中で切り詰めました。
+  stdout: 標準出力
+  stderr: 標準エラー
+  app_error_log: 実行中にアプリ側でエラーが起きました。ターミナルのログを確認してください。
+  ai_thinking: AI が考えています...
+  ai_no_answer: AI から回答が得られませんでした。
+
+status:
+  NOT_STARTED: 未着手
+  IN_PROGRESS: 挑戦中
+  PASSED: 合格
+
+level:
+  1: 基礎
+  2: 中級
+  3: 標準ライブラリ
+  4: 実務
+
+duration:
+  seconds: "{seconds}秒"
+  minutes: "{minutes}分"
+  hours: "{hours}時間"
+  hours_minutes: "{hours}時間{minutes}分"
+  days: "{days}日"
+  days_hours: "{days}日{hours}時間"
+
+recommend:
+  review: 🔁 復習({number}回目)
+  in_progress: ✏️ 挑戦中
+  weak_topic: 💪 苦手トピック「{topic}」
+  next: 🆕 次の問題
+
+ai_error:
+  # AI の呼び出しに失敗したときに画面に出すメッセージ(ai/client.py の AIError)
+  rate_limit: 無料枠の利用上限に達しました。しばらく待つか、GEMINI_MODEL を変えて試してください。
+  invalid_key: APIキーが無効です。.env の GEMINI_API_KEY を確認してください。
+  model_not_found: モデルが見つかりません。.env の GEMINI_MODEL を確認してください。
+  server_error: AI サービス側で一時的なエラーが起きました。少し時間をおいて試してください。
+  other: AI の呼び出しに失敗しました({code} {status})
+  connection: AI に接続できませんでした({name})
+  empty: AI から回答が得られませんでした。少し時間をおいて試してください。
+
+ai_input:
+  # AI に送るプロンプトに埋め込む文言(実行結果の要約など)
+  not_run: (まだ実行していません)
+  passed: 合格
+  failed: "不合格(エラー種別: {error_type})"
+  unknown: 不明
+  stdout: 標準出力
+  stderr: 標準エラー
+  exit_code: "終了コード: {code}"
+  timed_out: タイムアウトしました
+  clipped: "... (以下 {count} 文字省略)"
+
+exercise:
+  load_error: "教材の読み込みに失敗: {name}\n\n{reason}"
+  no_exercises: 演習がありません。exercises/ に教材を追加してください。
+  db_unavailable: 進捗DBを開けないため、今回の結果は保存されません。ログを確認してください。
+  db_failed: 進捗を保存・読み込みできませんでした。ログを確認してください。
+  select_label: 問題
+  review_due: 🔁 復習の時期です({number}回目)。「初期コードに戻す」で、何も見ずにもう一度解いてみましょう。
+  meta: "レベル{level}({level_name})・トピック: {topic}  {tags}"
+  content_language_note: (この問題はまだ英訳がありません)
+  php_note: 🐘 PHPとの違い
+  hints: ヒント
+  hint_item: "**ヒント{number}**: {hint}"
+  show_hint: ヒント{number}を見る(全{total}段階)
+  no_more_hints: ヒントはこれで全部です。
+  passed: 🎉 合格!({passed}/{total} ケース)
+  failed: 不合格({passed}/{total} ケース){detail}
+  duration: "実行時間: {ms} ms"
+  grading_error: 採点中にアプリ側でエラーが起きました。ターミナルのログを確認してください。
+  code: コード
+  reset: 初期コードに戻す
+  attempts: "挑戦回数: {count}"
+  ai_title: 🤖 AIアシスタント
+  ai_disabled: AI機能は無効です。.env に GEMINI_API_KEY を設定して再起動すると、AIのヒント・エラー解説・コードレビューが使えます。
+  ai_hint: AIヒント({level}/{total})
+  ai_hint_used_up: AIヒントは使い切りました
+  ai_explain: 不合格の原因を考える
+  ai_explain_help: 直近の実行が不合格のときに使えます
+  ai_review: コードレビュー
+  ai_review_help: 直近の実行で合格したコードをレビューします
+  ai_log_hint: AIヒント(段階{level})
+  ai_log_explain: 不合格の原因
+  ai_log_review: コードレビュー
+  ai_caution: AI の回答は誤っていることもあります。鵜呑みにせず、実行して確かめましょう。
+  solution: 模範解答
+  solution_locked: 合格すると表示されます。どうしても分からないときだけ開きましょう。
+  show_solution: 模範解答を見る
+
+dashboard:
+  title: ダッシュボード
+  db_error: 進捗DBを読み込めませんでした。ターミナルのログを確認してください。
+  passed_count: 合格した問題
+  streak: 連続学習日数
+  streak_value: "{days} 日"
+  attempts_total: 総挑戦回数
+  attempts_value: "{count} 回"
+  todo: 今日やること
+  all_done: 全問合格・復習も完了しています!新しい演習を追加しましょう。
+  solve: 解く
+  weak_topics: 苦手トピック
+  no_weak_topics: 今のところ苦手なトピックはありません。
+  weak_score_note: 苦手度 = 1問あたりの(不合格の回数 + ヒント使用数 + 模範解答を見たら3)の平均
+  mastery: トピック別習熟度
+  exercise_table: 問題ごとの状態
+  table_note: 合格までの時間 = 問題を初めて開いてから、初めて合格するまで / 復習 = 初合格の1日後・3日後・7日後
+  review_done: 完了
+  review_next: "{number}回目: {date}"
+  recent: 直近の学習履歴
+  no_history: まだ履歴がありません。「演習」ページで問題を解いてみましょう。
+  result_passed: ✅ 合格
+  result_failed: ❌ 不合格
+  export: 学習ログのエクスポート
+  export_csv: 挑戦履歴(CSV)
+  export_json: 進捗と履歴(JSON)
+  col:
+    topic: トピック
+    weak_score: 苦手度
+    tried: 挑戦した問題
+    level: レベル
+    passed_total: 合格 / 問題数
+    mastery: 習熟度
+    status: 状態
+    exercise: 問題
+    attempts: 挑戦回数
+    hints_used: ヒント使用
+    solution_viewed: 模範解答を見た
+    time_to_pass: 合格までの時間
+    next_review: 次の復習
+    datetime: 日時
+    result: 結果
+    error: エラー
+    duration_ms: 実行時間(ms)
+
+playground:
+  title: 自由に試す
+  caption: お題なしで Python を書いて実行できます。結果は保存されません。
+  stdin: 標準入力(input() で読まれる内容)
+  ran: 実行しました({ms} ms)
+  exited_with_error: エラーで終了しました(終了コード {code}、{ms} ms)
+  no_output: (出力なし)
+  ai_title: 🤖 AIレビュー
+  ai_disabled: AI機能は無効です。.env に GEMINI_API_KEY を設定して再起動すると使えます。
+  ai_review: このコードをレビューしてもらう
+  ai_caution: AI の回答は誤っていることもあります。実行して確かめましょう。

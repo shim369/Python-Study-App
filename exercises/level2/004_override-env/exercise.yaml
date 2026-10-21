@@ -70,3 +70,52 @@ php_note: |
   Pythonのコンテキストマネージャは「準備と後片付け」を1か所にまとめて再利用できる仕組みで、
   ファイル(`with open(...)`)やDB接続、ロックなどで日常的に使います。
 tags: [context-manager, contextlib, os]
+en:
+  title: Temporarily changing environment variables
+  description: |
+    ## Task
+    Implement a context manager `override_env(**values)` that changes environment variables only inside a
+    `with` block and restores them when the block is exited.
+
+    ```python
+    with override_env(APP_ENV="test", DEBUG=None):
+        ...  # in here, APP_ENV="test" and DEBUG doesn't exist
+    # back to the original state here
+    ```
+
+    ## Rules
+    - For keys whose value is a string, set that value in `os.environ`
+    - For keys whose value is `None`, delete them from `os.environ` (do nothing if they didn't exist)
+    - On leaving the block, **restore the original state exactly**
+      - Keys that had a value get their original value back
+      - Keys that didn't exist originally are deleted
+    - Restore even if an exception occurs inside the block, and let the exception propagate as is
+    - Don't touch keys that weren't specified
+
+    With the `@contextmanager` in the starter code, the code before `yield` runs "on enter" and
+    the code after it runs "on exit".
+  hints:
+    - >-
+      Remember the "original state" before changing anything, and write it back on exit. You also need to
+      remember that a key "didn't exist originally".
+    - >-
+      os.environ.get(key) returns None when the key is missing, so you can save the "original state" in the same
+      shape as values ({key: value or None}). Use try / finally to restore even when an exception occurs.
+    - >-
+      Steps: save the original state with {key: os.environ.get(key) for key in values} → apply values inside try and yield
+      → apply the saved state in finally. Making "apply" a small function (pop(key, None) for None, assignment otherwise)
+      lets you use it twice.
+  php_note: |
+    PHP has no `with` statement, so you write `try { ... } finally { ... }` every time for cleanup.
+    Python's context managers bundle "setup and cleanup" in one reusable place,
+    and they're used every day for files (`with open(...)`), DB connections, locks and so on.
+  starter_code: |
+    import os
+    from collections.abc import Iterator
+    from contextlib import contextmanager
+
+
+    @contextmanager
+    def override_env(**values: str | None) -> Iterator[None]:
+        # Implement here
+        raise NotImplementedError

@@ -47,3 +47,41 @@ php_note: |
   Pythonの普通の辞書では `KeyError` になります。`collections.defaultdict(list)` を使うと
   PHPと同じように書けます。また Python 3.7 以降の辞書は、PHPの連想配列と同じく挿入順を保ちます。
 tags: [collections, defaultdict, dict]
+en:
+  title: Grouping anagrams
+  description: |
+    ## Task
+    Implement a function `group_anagrams(words)` that splits the list of words `words` into groups of anagrams
+    (words that become the same string when their letters are rearranged).
+
+    ## Rules
+    - All words consist of lowercase English letters only (no case conversion needed)
+    - Groups are ordered by **the order in which each group's first word appears in `words`**
+    - Words within a group are also in the order they appear in `words`
+    - If the same word appears multiple times, put it in the group that many times
+    - If `words` is empty, return an empty list
+    - Don't modify the list passed as the argument
+
+    ## Example
+    ```python
+    >>> group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"])
+    [['eat', 'tea', 'ate'], ['tan', 'nat'], ['bat']]
+    ```
+  hints:
+    - >-
+      Decide on one "representative value" that is always the same for anagrams of each other,
+      and build the groups in a dict keyed by it.
+    - >-
+      Sorting the letters with sorted and joining them gives the same string for anagrams. The collections module
+      has a dict that automatically creates an empty list when a key is missing. Also, Python dicts keep insertion order.
+    - >-
+      Steps: prepare collections.defaultdict(list) → for each word, append it under the key "".join(sorted(word))
+      → return the dict's values() as a list.
+  php_note: |
+    In PHP, writing `$groups[$key][] = $word;` creates the array automatically even for an undefined key,
+    but a plain Python dict raises `KeyError`. With `collections.defaultdict(list)` you can write it
+    the same way as in PHP. Also, since Python 3.7, dicts keep insertion order, just like PHP associative arrays.
+  starter_code: |
+    def group_anagrams(words: list[str]) -> list[list[str]]:
+        # Implement here
+        raise NotImplementedError

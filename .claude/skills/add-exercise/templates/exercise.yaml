@@ -34,10 +34,30 @@ hints:
   - >-
     段階2: 具体的な道具(関数名・構文)を示す。まだコードは書かない
   - >-
-    段階3: 手順を日本語で。コードの断片は1行まで
+    段階3: 手順を文章で。コードの断片は1行まで
 solution: |
   def function_name(arg: str) -> int:
       ...
 php_note: |
   PHPでは `...` と書くところを、Pythonでは `...` と書きます。
 tags: [dict]
+# 画面の English 表示用の英訳(全問必須)。コード・テスト・模範解答は日本語版と共通
+en:
+  title: Title
+  description: |
+    ## Task
+    Implement `function_name(arg)`. ...
+  hints:
+    - >-
+      Level 1 hint
+    - >-
+      Level 2 hint
+    - >-
+      Level 3 hint
+  php_note: |
+    In PHP you write `...`, but in Python you write `...`.
+  # 初期コードのコメント・docstring だけを英訳したもの(訳すものが無ければ省略)
+  starter_code: |
+    def function_name(arg: str) -> int:
+        # Implement here
+        raise NotImplementedError

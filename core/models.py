@@ -9,6 +9,8 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from core.i18n import Lang
+
 LEVEL_NAMES: dict[int, str] = {1: "基礎", 2: "中級", 3: "標準ライブラリ", 4: "実務"}
 
 
@@ -18,6 +20,21 @@ class IOCase(BaseModel):
     name: str = ""
     stdin: str = ""
     expected_stdout: str
+
+
+class ExerciseTranslation(BaseModel):
+    """問題文など「読む部分」の英訳(exercise.yaml の en:)。テスト・模範解答は共通。
+
+    starter_code はコメントや docstring だけを英訳した初期コード。訳すものが無ければ省略する。
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    hints: list[str] = Field(min_length=3, max_length=3)
+    php_note: str | None = None
+    starter_code: str | None = None
 
 
 class Exercise(BaseModel):
@@ -37,6 +54,7 @@ class Exercise(BaseModel):
     php_note: str | None = None
     tags: list[str] = Field(default_factory=list)
     time_limit_sec: float = Field(default=5.0, gt=0, le=30)
+    en: ExerciseTranslation | None = None
     # YAML ではなく同じディレクトリの test_solution.py から読み込む
     test_source: str | None = None
 
@@ -46,7 +64,23 @@ class Exercise(BaseModel):
             raise ValueError("grading=pytest の演習には test_solution.py が必要です")
         if self.grading == "io" and not self.cases:
             raise ValueError("grading=io の演習には cases が1件以上必要です")
+        if self.en is not None and (self.en.php_note is None) != (self.php_note is None):
+            raise ValueError("php_note は日本語・英語の両方に書くか、両方とも省略してください")
         return self
+
+    def localized(self, lang: Lang) -> Self:
+        """表示する言語に合わせた Exercise を返す。訳が無ければ日本語のまま。"""
+        if lang != "en" or self.en is None:
+            return self
+        return self.model_copy(
+            update={
+                "title": self.en.title,
+                "description": self.en.description,
+                "hints": self.en.hints,
+                "php_note": self.en.php_note,
+                "starter_code": self.en.starter_code or self.starter_code,
+            }
+        )
 
     @property
     def level_name(self) -> str:

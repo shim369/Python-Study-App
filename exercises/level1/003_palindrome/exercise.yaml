@@ -41,3 +41,40 @@ php_note: |
   スライス `[::-1]` で逆順を作れます(`[開始:終了:ステップ]` のステップに -1 を指定)。
   `ctype_alnum($c)` に相当するのが `c.isalnum()` です。
 tags: [string, slice, comprehension]
+en:
+  title: Palindrome check
+  description: |
+    ## Task
+    Implement a function `is_palindrome(text)` that checks whether the string `text` is a palindrome
+    (reads the same forwards and backwards).
+
+    ## Rules
+    - Only look at alphanumeric characters (those for which `str.isalnum()` is `True`). Ignore spaces and symbols
+    - Case-insensitive
+    - If there are no characters to check (e.g. an empty string), return `True`
+
+    ## Example
+    ```python
+    >>> is_palindrome("A man, a plan, a canal: Panama")
+    True
+    >>> is_palindrome("race a car")
+    False
+    ```
+  hints:
+    - >-
+      Split it into two parts: "extract and normalize only the characters to check" and
+      "compare with the reversed version".
+    - >-
+      Use str.isalnum() for the character type and str.lower() to normalize case.
+      Any sequence can be reversed with slicing.
+    - >-
+      Steps: collect only the isalnum() characters of text, lowercased → return the result of
+      comparing it with == to its reverse made by [::-1].
+  php_note: |
+    In PHP you reverse with `strrev()`, but in Python any sequence such as a string or list can be
+    reversed with the slice `[::-1]` (a step of -1 in `[start:stop:step]`).
+    The equivalent of `ctype_alnum($c)` is `c.isalnum()`.
+  starter_code: |
+    def is_palindrome(text: str) -> bool:
+        # Implement here
+        raise NotImplementedError

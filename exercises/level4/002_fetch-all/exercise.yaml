@@ -69,3 +69,56 @@ php_note: |
   `Semaphore` は「同時に入れる人数が決まった部屋」のようなもので、Guzzle Pool の
   concurrency に相当します。
 tags: [asyncio, concurrency, semaphore]
+en:
+  title: Concurrent fetching with a limit (asyncio)
+  description: |
+    ## Task
+    Implement an async function `fetch_all(urls, fetch, limit)` that fetches multiple URLs **concurrently**.
+    To avoid overloading the server, limit it to **at most `limit` fetches running at the same time**.
+
+    ## Arguments
+    - `urls`: the list of URLs to fetch
+    - `fetch`: an async function that fetches one URL (`await fetch(url)` returns the body as a string).
+      In the tests, a fake that waits with `asyncio.sleep` instead of real networking is passed in
+    - `limit`: the maximum number of `fetch` calls allowed to run at the same time
+
+    ## Rules
+    - The return value is a list of bodies **in the same order as `urls`** (not the order in which they finished)
+    - The number of concurrent fetches must not exceed `limit`. On the other hand, up to `limit` fetches must really run concurrently
+      (waiting for them one at a time is not allowed)
+    - If `urls` is empty, return an empty list
+    - If `limit` is less than 1, raise `ValueError`
+    - If `fetch` raises an exception, you may let that exception propagate as is
+
+    ## Example
+    ```python
+    >>> asyncio.run(fetch_all(["https://a.example", "https://b.example"], fetch, limit=2))
+    ['<body of a>', '<body of b>']
+    ```
+  hints:
+    - >-
+      Split it into "run everything concurrently and collect the results in order" and "limit how many run at once".
+      asyncio has tools for both.
+    - >-
+      asyncio.gather(*coroutines) runs them concurrently and returns the results as a list in the order you passed them.
+      To limit concurrency, use asyncio.Semaphore(limit) with async with.
+    - >-
+      Steps: check limit → create a Semaphore → define an inner async function that only does
+      "async with semaphore: return await fetch(url)" → pass that function called for each URL to gather and await it
+      → return it as a list.
+  php_note: |
+    PHP basically runs synchronously, one thread per request, so for concurrent HTTP fetching you use
+    `curl_multi_*` or Guzzle promises (the `concurrency` option of `Pool`).
+    In Python, `asyncio` lets you write the same thing with language-level `async` / `await`.
+    A `Semaphore` is like "a room with a fixed number of people allowed inside", equivalent to
+    the concurrency of a Guzzle Pool.
+  starter_code: |
+    import asyncio
+    from collections.abc import Awaitable, Callable
+
+
+    async def fetch_all(
+        urls: list[str], fetch: Callable[[str], Awaitable[str]], limit: int
+    ) -> list[str]:
+        # Implement here
+        raise NotImplementedError

@@ -63,3 +63,53 @@ php_note: |
   パスをオブジェクトとして扱い、`path.suffix` や `path.stat()` のようにメソッドで操作します。
   `root / "docs" / "a.txt"` のように `/` 演算子でパスを結合できるのも特徴です。
 tags: [pathlib, filesystem, generator]
+en:
+  title: Finding files (pathlib)
+  description: |
+    ## Task
+    Implement a function `find_files(root, suffix, min_bytes=0)` that searches the directory `root`
+    (including subdirectories) for files matching the conditions and returns a list of their paths relative to `root`.
+
+    ## Rules
+    - Only files with the extension `suffix` (e.g. `".txt"`) count. The extension is case-insensitive
+      - The extension is everything from the last `.` (the extension of `"archive.tar.gz"` is `".gz"`)
+    - Only files of at least `min_bytes` bytes count
+    - Directories don't count (even if a directory is named `notes.txt`, don't include it)
+    - The return value is a list of the paths relative to `root` as **`/`-separated strings** (e.g. `"docs/a.txt"`), sorted in ascending order
+
+    ## Example
+    ```
+    root/
+    ├── a.txt          (10 bytes)
+    ├── b.md
+    └── docs/
+        └── c.TXT      (0 bytes)
+    ```
+    ```python
+    >>> find_files(root, ".txt")
+    ['a.txt', 'docs/c.TXT']
+    >>> find_files(root, ".txt", min_bytes=1)
+    ['a.txt']
+    ```
+  hints:
+    - >-
+      You don't need os.walk or string concatenation: pathlib.Path's methods alone can "search recursively",
+      "check the extension", "check the size" and "make a relative path".
+    - >-
+      Path.rglob("*") lists everything under a directory recursively. Look up is_file(), suffix, stat().st_size,
+      relative_to(root) and as_posix().
+    - >-
+      Steps: loop over root.rglob("*") → keep only items where is_file() is true, suffix.lower() matches and
+      stat().st_size is at least min_bytes → turn them into strings with relative_to(root).as_posix() → return them sorted.
+  php_note: |
+    In PHP you'd combine `RecursiveIteratorIterator` + `RecursiveDirectoryIterator` or `glob()` with functions like
+    `pathinfo()` and `filesize()`, but Python's `pathlib.Path` treats a path as an object and you work with it through
+    methods like `path.suffix` and `path.stat()`.
+    Another feature is joining paths with the `/` operator, as in `root / "docs" / "a.txt"`.
+  starter_code: |
+    from pathlib import Path
+
+
+    def find_files(root: Path, suffix: str, min_bytes: int = 0) -> list[str]:
+        # Implement here
+        raise NotImplementedError

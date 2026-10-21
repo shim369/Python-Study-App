@@ -36,6 +36,10 @@ description: Python-Study-App に演習(コーディング問題)を1問追加�
 - **hints**: 3段階で徐々に具体的に。**どの段階でも完成コードを書かない**
 - **solution**: Pythonicで、学習者のお手本になる書き方(型ヒント・内包表記・標準ライブラリ)
 - **php_note**: PHPとの違いが学びになる場合のみ書く(無理に書かない)
+- **en**: title・description・hints・php_note(初期コードにコメントや docstring があれば starter_code も)の英訳(画面の English 表示用。全問必須で、
+  tests/test_exercises.py が確認する)。php_note は日本語と英語の両方に書くか、両方省略する。
+  テストが日本語の出力を確かめる問題では、英訳でもその文字列をそのまま示す。
+  en.starter_code はコメント・docstring 以外を変えない(tests/test_exercises.py が確認する)
 - 1問は 5〜20分で解ける粒度に
 - time_limit_sec は既定(5秒)のままにする。重い処理が必要な問題は作らない
 

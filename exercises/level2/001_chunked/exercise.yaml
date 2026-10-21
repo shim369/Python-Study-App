@@ -52,3 +52,47 @@ php_note: |
   PHPにも `yield` があり、考え方は同じです。
   なお Python 3.12 以降には同様の `itertools.batched`(タプルを返す)が標準で入っています。
 tags: [generator, itertools, typing]
+en:
+  title: Chunking generator
+  description: |
+    ## Task
+    Implement a generator function `chunked(iterable, size)` that splits `iterable` into lists of
+    `size` items and **yields them one by one**.
+
+    ## Rules
+    - The last chunk may have fewer than `size` items (yield the remainder as is)
+    - For an empty iterable, yield nothing
+    - It must work with an **infinite iterator** (e.g. `itertools.count()`), taking out only as many items as needed
+      (don't turn the whole input into a list at once)
+    - If `size` is less than 1, raise `ValueError` (raising it when the first item is requested is fine)
+
+    ## Example
+    ```python
+    >>> list(chunked([1, 2, 3, 4, 5], 2))
+    [[1, 2], [3, 4], [5]]
+    ```
+
+    The `[T]` in the signature is Python 3.12's type parameter syntax. It means "the item type T
+    becomes the item type of the lists" (equivalent to PHPDoc's `@template T`).
+  hints:
+    - >-
+      Instead of returning everything at once with return, make it a function that hands over
+      each chunk with yield as soon as it's ready.
+    - >-
+      The argument isn't necessarily a list, so first turn it into an iterator with iter() and take items
+      out a little at a time. The itertools module has a function that "takes only the first n items".
+    - >-
+      Steps: check size → iterator = iter(iterable) → in a loop, "take up to size items and make a list"
+      → stop the loop if the list is empty, otherwise yield it.
+  php_note: |
+    PHP's `array_chunk($array, 2)` builds the whole array at once, but a generator builds one chunk
+    each time it's asked, so it works even with huge files or infinite input.
+    PHP also has `yield`, and the idea is the same.
+    Note that Python 3.12+ ships a similar `itertools.batched` (which returns tuples) in the standard library.
+  starter_code: |
+    from collections.abc import Iterable, Iterator
+
+
+    def chunked[T](iterable: Iterable[T], size: int) -> Iterator[list[T]]:
+        # Implement here
+        raise NotImplementedError

@@ -51,3 +51,50 @@ php_note: |
   Pythonではデフォルト値は**定義時に1回だけ**作られ、リストは参照で渡されるため、
   「変更可能なデフォルト引数」はPHP経験者が最もハマりやすい落とし穴の1つです。
 tags: [function, list, bugfix]
+en:
+  title: Fixing a default-argument bug
+  description: |
+    ## Situation
+    You received this bug report about the function `add_tag(tag, tags)` written by a colleague:
+
+    > After calling `add_tag("a")`, calling `add_tag("b")` returns `["a", "b"]` instead of `["b"]`.
+    > Also, the list I pass in gets modified.
+
+    ## Task
+    Fix the starter code so that it works as specified.
+
+    ## Specification
+    - Return a **new list** with `tag` appended to the end of `tags`
+    - If `tags` is omitted, return `[tag]` (no matter how many times it's called, earlier calls have no effect)
+    - Don't modify the `tags` passed as the argument
+    - Use `None`, Python's standard way of saying "omitted", as the default value of `tags`
+
+    ## Example
+    ```python
+    >>> add_tag("a")
+    ['a']
+    >>> add_tag("b")
+    ['b']
+    >>> add_tag("c", ["x"])
+    ['x', 'c']
+    ```
+  hints:
+    - >-
+      Find out whether the default value of an argument (here, []) is created every time the
+      function is called, or only once.
+    - >-
+      Default arguments are evaluated only once, "when the function is defined", and the same list is reused.
+      In Python, None is the standard way to represent "omitted". Also, append modifies the original list.
+    - >-
+      Steps: make the default None and the type hint list[str] | None → treat None as an empty list →
+      instead of modifying the original list, build and return a new list with the element added.
+  php_note: |
+    In PHP, the default argument `function f($tags = [])` is a new array on every call,
+    and arrays are passed by value (copied), so this bug doesn't happen.
+    In Python, the default value is created **only once, at definition time**, and lists are passed by reference,
+    so "mutable default arguments" are one of the pitfalls PHP developers fall into most often.
+  starter_code: |
+    def add_tag(tag: str, tags: list[str] = []) -> list[str]:
+        """Return a list with tag appended to the end of tags."""
+        tags.append(tag)
+        return tags

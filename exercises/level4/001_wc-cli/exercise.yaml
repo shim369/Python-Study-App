@@ -95,3 +95,62 @@ php_note: |
   エラーメッセージまで面倒を見てくれます。
   `main(argv)` が引数のリストを受け取る形にしておくと、テストから直接呼べるのが実務上のコツです。
 tags: [cli, argparse, pathlib, testing]
+en:
+  title: A line and word counting CLI (argparse)
+  description: |
+    ## Task
+    Using the standard library's `argparse`, implement `main(argv)`, the core of a command-line tool
+    that prints the number of lines and words in text files.
+
+    ```
+    $ python pywc.py a.txt b.txt
+    3 10 a.txt
+    1 2 b.txt
+    $ python pywc.py -l a.txt
+    3 a.txt
+    ```
+
+    ## Specification
+    - Arguments: one or more file names (zero is an argparse error)
+    - Options: `-l` / `--lines` (line count only), `-w` / `--words` (word count only)
+      - If neither or both are given, show both "lines words"
+    - Output: one line per file, `{lines} {words} {file name}` to standard output (omit the items not shown)
+      - Show the file name exactly as given in the arguments
+      - The line count is the number of items from `str.splitlines()`, the word count from `str.split()` (files are UTF-8)
+    - For a file that doesn't exist, print exactly `error: ファイルが見つかりません: {file name}` to standard error
+      (the Japanese text means "file not found"; the tests check this exact string) and move on to the next file
+    - Return value (exit code): `0` if every file was read, `1` if any file couldn't be read
+    - argparse errors (unknown options etc.) may raise `SystemExit` as argparse normally does
+
+    The tests call it with a list of arguments, like `main(["-l", "a.txt"])`.
+    When `argv` is `None`, argparse uses the command-line arguments (`sys.argv[1:]`).
+  hints:
+    - >-
+      Think of "defining and parsing the arguments" and "counting and printing" separately. The key is to leave argument
+      parsing to argparse.ArgumentParser instead of reading sys.argv yourself.
+    - >-
+      add_argument("files", nargs="+") gives one or more positional arguments, and add_argument("-l", "--lines",
+      action="store_true") gives a flag. Passing a list to parse_args(argv) makes it easy to test. Print errors with
+      print(..., file=sys.stderr).
+    - >-
+      Steps: build the parser and parse_args(argv) → "show the line count" = lines given or words not given (same for words)
+      → read_text each file; on FileNotFoundError, print to stderr and set the exit code to 1 → print the numbers to show
+      → return the exit code.
+  php_note: |
+    In PHP you parse `$argv` yourself or use `getopt()`, but `getopt()` doesn't generate help or
+    convert types. Python's `argparse` takes care of auto-generating `--help`, checking required arguments,
+    and even error messages.
+    A practical tip: making `main(argv)` take the argument list lets tests call it directly.
+  starter_code: |
+    import argparse
+    import sys
+    from pathlib import Path
+
+
+    def main(argv: list[str] | None = None) -> int:
+        # Implement here
+        raise NotImplementedError
+
+
+    if __name__ == "__main__":
+        sys.exit(main())

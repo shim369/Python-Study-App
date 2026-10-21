@@ -79,3 +79,45 @@ def test_load_all_collects_errors_and_duplicates(tmp_path: Path) -> None:
     assert len(result.errors) == 2
     assert any("重複" in e.reason for e in result.errors)
     assert set(result.by_id()) == {"l1-001-double"}
+
+
+def test_localized_uses_english_translation(tmp_path: Path) -> None:
+    yaml_text = VALID_YAML + "en:\n  title: Double\n  description: Double it\n  hints: [x, y, z]\n"
+    directory = write_exercise(tmp_path, "level1", "001_double", yaml_text, TESTS)
+    exercise = load_exercise(directory)
+
+    english = exercise.localized("en")
+    assert (english.title, english.description, english.hints) == (
+        "Double",
+        "Double it",
+        ["x", "y", "z"],
+    )
+    assert english.solution == exercise.solution  # 模範解答は共通
+    assert english.starter_code == exercise.starter_code  # 英語版の初期コードが無ければ日本語版
+    assert exercise.localized("ja").title == "2倍"
+
+
+def test_localized_without_translation_stays_japanese(tmp_path: Path) -> None:
+    directory = write_exercise(tmp_path, "level1", "001_double", VALID_YAML, TESTS)
+    assert load_exercise(directory).localized("en").title == "2倍"
+
+
+def test_php_note_must_be_translated_too(tmp_path: Path) -> None:
+    yaml_text = (
+        VALID_YAML
+        + "php_note: PHPでは\n"
+        + "en:\n  title: Double\n  description: Double it\n  hints: [x, y, z]\n"
+    )
+    directory = write_exercise(tmp_path, "level1", "001_double", yaml_text, TESTS)
+    with pytest.raises(ExerciseLoadError, match="php_note"):
+        load_exercise(directory)
+
+
+def test_localized_uses_english_starter_code(tmp_path: Path) -> None:
+    yaml_text = VALID_YAML + (
+        "en:\n  title: Double\n  description: Double it\n  hints: [x, y, z]\n"
+        "  starter_code: |\n    def double(n): ...  # Implement here\n"
+    )
+    directory = write_exercise(tmp_path, "level1", "001_double", yaml_text, TESTS)
+    english = load_exercise(directory).localized("en")
+    assert english.starter_code == "def double(n): ...  # Implement here\n"

@@ -56,3 +56,50 @@ php_note: |
   `groupby` のほか `chain`・`islice`・`accumulate` などがよく使われます。
   なお `groupby` は **連続する** 値だけをまとめる点に注意(SQLの GROUP BY とは違います)。
 tags: [itertools, groupby, string]
+en:
+  title: Run-length encoding (itertools)
+  description: |
+    ## Task
+    Implement encoding and decoding for run-length encoding, which represents runs of the same character
+    as "(character, count)" pairs.
+
+    - `encode(text)`: turn a string into a list `[(character, run length), ...]`
+    - `decode(pairs)`: turn the result of `encode` back into the original string
+
+    ## Rules
+    - The same character in non-consecutive positions forms separate pairs (`"aba"` → `[("a", 1), ("b", 1), ("a", 1)]`)
+    - Uppercase and lowercase are different characters
+    - An empty string becomes an empty list, and an empty list becomes an empty string
+    - `decode(encode(s)) == s` must hold for any string `s`
+
+    ## Example
+    ```python
+    >>> encode("aaabccdddd")
+    [('a', 3), ('b', 1), ('c', 2), ('d', 4)]
+    >>> decode([('x', 2), ('y', 1)])
+    'xxy'
+    ```
+  hints:
+    - >-
+      For "grouping adjacent equal values" you don't need to manage a loop and the previous character yourself:
+      the standard library's itertools has a dedicated function.
+    - >-
+      itertools.groupby returns (value, the run of that value) for each run of equal consecutive values.
+      You can count a run with len(list(...)). For decoding, join strings made by "character * count".
+    - >-
+      Steps: encode is a list comprehension making (char, len(list(group))) from each (char, group) of groupby(text).
+      decode makes char * count for each (char, count) and joins them with "".join(...).
+  php_note: |
+    PHP has no function equivalent to `itertools.groupby`, so you'd write a loop that remembers the
+    previous character in a variable. Python's `itertools` is "a toolkit for combining iterators";
+    besides `groupby`, `chain`, `islice` and `accumulate` are commonly used.
+    Note that `groupby` only groups **consecutive** values (unlike SQL's GROUP BY).
+  starter_code: |
+    def encode(text: str) -> list[tuple[str, int]]:
+        # Implement here
+        raise NotImplementedError
+
+
+    def decode(pairs: list[tuple[str, int]]) -> str:
+        # Implement here
+        raise NotImplementedError

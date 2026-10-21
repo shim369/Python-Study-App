@@ -1,0 +1,159 @@
+# UI text (English). Keep the keys in sync with ja.yaml (checked by tests/test_i18n.py)
+# {name} in a value is filled in at runtime (str.format)
+
+nav:
+  exercise: Exercises
+  dashboard: Dashboard
+  playground: Playground
+
+common:
+  run: ▶ Run
+  running: Running...
+  timeout: ⏱ Timed out. Check for infinite loops or very heavy processing.
+  truncated: The output was too long and has been truncated.
+  stdout: Standard output
+  stderr: Standard error
+  app_error_log: The app hit an error while running. Check the terminal log.
+  ai_thinking: AI is thinking...
+  ai_no_answer: Could not get an answer from the AI.
+
+status:
+  NOT_STARTED: Not started
+  IN_PROGRESS: In progress
+  PASSED: Passed
+
+level:
+  1: Basics
+  2: Intermediate
+  3: Standard library
+  4: Practical
+
+duration:
+  seconds: "{seconds}s"
+  minutes: "{minutes}m"
+  hours: "{hours}h"
+  hours_minutes: "{hours}h {minutes}m"
+  days: "{days}d"
+  days_hours: "{days}d {hours}h"
+
+recommend:
+  review: "🔁 Review (#{number})"
+  in_progress: ✏️ In progress
+  weak_topic: "💪 Weak topic: {topic}"
+  next: 🆕 Next exercise
+
+ai_error:
+  # Messages shown when calling the AI fails (AIError in ai/client.py)
+  rate_limit: You've hit the free-tier usage limit. Wait a while, or try a different GEMINI_MODEL.
+  invalid_key: The API key is invalid. Check GEMINI_API_KEY in .env.
+  model_not_found: Model not found. Check GEMINI_MODEL in .env.
+  server_error: The AI service had a temporary error. Please try again in a little while.
+  other: Calling the AI failed ({code} {status})
+  connection: Could not connect to the AI ({name})
+  empty: Could not get an answer from the AI. Please try again in a little while.
+
+ai_input:
+  # Text embedded in the prompts sent to the AI (run result summaries, etc.)
+  not_run: (not run yet)
+  passed: Passed
+  failed: "Failed (error type: {error_type})"
+  unknown: unknown
+  stdout: Standard output
+  stderr: Standard error
+  exit_code: "Exit code: {code}"
+  timed_out: Timed out
+  clipped: "... ({count} more characters omitted)"
+
+exercise:
+  load_error: "Failed to load exercise: {name}\n\n{reason}"
+  no_exercises: No exercises found. Add some under exercises/.
+  db_unavailable: Could not open the progress DB, so results will not be saved this time. Check the log.
+  db_failed: Could not save or load progress. Check the log.
+  select_label: Exercise
+  review_due: "🔁 Time to review (#{number}). Use \"Reset to starter code\" and solve it again without looking."
+  meta: "Level {level} ({level_name}) · Topic: {topic}  {tags}"
+  content_language_note: This exercise has no English translation yet, so it is shown in Japanese.
+  php_note: 🐘 Differences from PHP
+  hints: Hints
+  hint_item: "**Hint {number}**: {hint}"
+  show_hint: Show hint {number} (of {total})
+  no_more_hints: That's all the hints.
+  passed: 🎉 Passed! ({passed}/{total} cases)
+  failed: Failed ({passed}/{total} cases){detail}
+  duration: "Run time: {ms} ms"
+  grading_error: The app hit an error while grading. Check the terminal log.
+  code: Code
+  reset: Reset to starter code
+  attempts: "Attempts: {count}"
+  ai_title: 🤖 AI assistant
+  ai_disabled: AI features are disabled. Set GEMINI_API_KEY in .env and restart to use AI hints, failure explanations and code reviews.
+  ai_hint: AI hint ({level}/{total})
+  ai_hint_used_up: No AI hints left
+  ai_explain: Explain the failure
+  ai_explain_help: Available when the last run failed
+  ai_review: Code review
+  ai_review_help: Reviews the code that passed in the last run
+  ai_log_hint: AI hint (level {level})
+  ai_log_explain: Why it failed
+  ai_log_review: Code review
+  ai_caution: AI answers can be wrong. Don't take them at face value — run the code to check.
+  solution: Model solution
+  solution_locked: Shown once you pass. Open it only when you're really stuck.
+  show_solution: Show model solution
+
+dashboard:
+  title: Dashboard
+  db_error: Could not load the progress DB. Check the terminal log.
+  passed_count: Exercises passed
+  streak: Study streak
+  streak_value: "{days} days"
+  attempts_total: Total attempts
+  attempts_value: "{count}"
+  todo: To do today
+  all_done: Everything passed and all reviews are done! Time to add new exercises.
+  solve: Solve
+  weak_topics: Weak topics
+  no_weak_topics: No weak topics so far.
+  weak_score_note: Weakness = average per exercise of (failed runs + hints used + 3 if the solution was viewed)
+  mastery: Mastery by topic
+  exercise_table: Status by exercise
+  table_note: Time to pass = from first opening the exercise until the first pass / Reviews = 1, 3 and 7 days after the first pass
+  review_done: Done
+  review_next: "#{number}: {date}"
+  recent: Recent activity
+  no_history: No history yet. Try solving an exercise on the "Exercises" page.
+  result_passed: ✅ Passed
+  result_failed: ❌ Failed
+  export: Export study log
+  export_csv: Attempt history (CSV)
+  export_json: Progress and history (JSON)
+  col:
+    topic: Topic
+    weak_score: Weakness
+    tried: Exercises tried
+    level: Level
+    passed_total: Passed / Total
+    mastery: Mastery
+    status: Status
+    exercise: Exercise
+    attempts: Attempts
+    hints_used: Hints used
+    solution_viewed: Viewed solution
+    time_to_pass: Time to pass
+    next_review: Next review
+    datetime: Date
+    result: Result
+    error: Error
+    duration_ms: Run time (ms)
+
+playground:
+  title: Playground
+  caption: Write and run any Python code without an exercise. Nothing is saved.
+  stdin: Standard input (what input() reads)
+  ran: Ran successfully ({ms} ms)
+  exited_with_error: Exited with an error (exit code {code}, {ms} ms)
+  no_output: (no output)
+  ai_title: 🤖 AI review
+  ai_disabled: AI features are disabled. Set GEMINI_API_KEY in .env and restart to use them.
+  ai_review: Review this code
+  ai_caution: AI answers can be wrong. Run the code to check.

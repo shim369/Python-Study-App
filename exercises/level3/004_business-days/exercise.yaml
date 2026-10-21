@@ -52,3 +52,46 @@ php_note: |
   曜日は PHPの `format('N')`(月曜=1)と違い、`weekday()` は月曜=0 です
   (`isoweekday()` なら月曜=1)。
 tags: [datetime, timedelta, generator]
+en:
+  title: Counting business days (datetime)
+  description: |
+    ## Task
+    Implement a function `count_business_days(start, end, holidays=())` that returns the number of business days
+    in the period `start` to `end` (**both ends included**).
+
+    ## Rules
+    - Business days are Monday to Friday, excluding days in `holidays`
+    - `holidays` is an iterable of `date` (a list or a set). It may include holidays falling on weekends
+    - If `start` is after `end`, return `0`
+
+    ## Example
+    October 19, 2026 is a Monday.
+    ```python
+    >>> count_business_days(date(2026, 10, 19), date(2026, 10, 25))   # Mon–Sun
+    5
+    >>> count_business_days(date(2026, 10, 19), date(2026, 10, 23), [date(2026, 10, 21)])
+    4
+    ```
+  hints:
+    - >-
+      Generate each day of the period in order and count it if it's "a weekday" and "not a holiday".
+      There's a dedicated type for adding to dates.
+    - >-
+      Subtracting one date from another gives a timedelta, and .days gives the number of days. The weekday is
+      date.weekday() (Monday is 0, Sunday is 6). Turn holidays into a set to make the holiday check fast.
+    - >-
+      Steps: turn holidays into a set → loop (end - start).days + 1 times making start + timedelta(days=n)
+      (if it's negative, the range is empty) → count the days whose weekday() is less than 5 and that aren't holidays.
+  php_note: |
+    PHP's `DateTime::modify('+1 day')` modifies the original object (except `DateTimeImmutable`),
+    but Python's `date` is immutable and `day + timedelta(days=1)` returns a new date.
+    Unlike PHP's `format('N')` (Monday=1), `weekday()` has Monday=0
+    (`isoweekday()` gives Monday=1).
+  starter_code: |
+    from collections.abc import Iterable
+    from datetime import date
+
+
+    def count_business_days(start: date, end: date, holidays: Iterable[date] = ()) -> int:
+        # Implement here
+        raise NotImplementedError
