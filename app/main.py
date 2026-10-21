@@ -27,16 +27,8 @@ logging.basicConfig(
 
 st.set_page_config(page_title="Python-Study-App", page_icon="🐍", layout="wide")
 
-# 表示言語の切り替え。各ページは st.session_state[LANG_KEY] を読んで文言を切り替える。
-# この widget は全ページで毎回描画されるので、ページを移動しても選んだ言語が保たれる
-st.sidebar.segmented_control(
-    LANGUAGE_LABEL,
-    options=LANGUAGES,
-    format_func=LANGUAGE_NAMES.__getitem__,
-    default=DEFAULT_LANG,
-    required=True,  # 選択中のボタンをもう一度押しても「未選択」にならないようにする
-    key=LANG_KEY,
-)
+# 表示言語。各ページは st.session_state[LANG_KEY] を読んで文言を切り替える。
+# ボタンを押した後の再実行では、widget を描画する前から session_state に新しい値が入っている
 t = Translator(as_lang(st.session_state.get(LANG_KEY)))
 
 page = st.navigation(
@@ -45,6 +37,16 @@ page = st.navigation(
         st.Page("pages/dashboard.py", title=t("nav.dashboard")),
         st.Page("pages/playground.py", title=t("nav.playground")),
     ]
+)
+# 言語の切り替えボタンは st.navigation の後に置く。前に置くと、サーバー起動直後の最初の実行中に
+# 押したクリックが反映されず、2回押さないと切り替わらなかった(ブラウザで確認)
+st.sidebar.segmented_control(
+    LANGUAGE_LABEL,
+    options=LANGUAGES,
+    format_func=LANGUAGE_NAMES.__getitem__,
+    default=DEFAULT_LANG,
+    required=True,  # 選択中のボタンをもう一度押しても「未選択」にならないようにする
+    key=LANG_KEY,
 )
 st.title("Python Study App")  # 全ページ共通の見出し(h1)。各ページの見出しは h2 にする
 st.space(30)  # h1 の下に余白(px)を空ける
