@@ -24,4 +24,5 @@ page = st.navigation(
         st.Page("pages/playground.py", title="自由に試す", icon="🧪"),
     ]
 )
+st.title("Python Study App")  # 全ページ共通の見出し(h1)。各ページの見出しは h2 にする
 page.run()

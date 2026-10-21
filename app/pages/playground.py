@@ -76,7 +76,7 @@ def render_ai_review(code: str, result: RunResult | None) -> None:
 
 
 def main() -> None:
-    st.title("自由に試す")
+    st.header("自由に試す")
     st.caption("お題なしで Python を書いて実行できます。結果は保存されません。")
 
     code: str = st_ace(

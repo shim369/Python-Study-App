@@ -180,7 +180,7 @@ def render_export(
 
 
 def main() -> None:
-    st.title("ダッシュボード")
+    st.header("ダッシュボード")
     exercises = load_all().exercises
     try:
         store = ProgressStore(db_path_from_env())

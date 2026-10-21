@@ -58,7 +58,8 @@ def click(app: AppTest, label: str) -> None:
 
 def test_page_shows_first_exercise(app: AppTest) -> None:
     assert not app.exception
-    assert app.title[0].value == FIRST.title
+    assert app.title[0].value == "Python Study App"
+    assert app.header[0].value == FIRST.title
 
 
 def test_starter_code_fails(app: AppTest) -> None:
@@ -99,7 +100,7 @@ def test_dashboard_shows_progress(app: AppTest) -> None:
 
     app.switch_page("pages/dashboard.py").run()
     assert not app.exception
-    assert app.title[0].value == "ダッシュボード"
+    assert app.header[0].value == "ダッシュボード"
     assert app.metric[0].value.startswith("1 /")  # 合格した問題
     assert app.metric[1].value == "1 日"  # 連続学習日数
 
@@ -139,13 +140,13 @@ def test_selection_is_kept_when_label_changes(app: AppTest) -> None:
     """実行して ✏️ / ✅ が付いても、選んだ問題のまま操作を続けられる。"""
     second = load_all().exercises[1]
     app.sidebar.selectbox[0].select_index(1).run()
-    assert app.title[0].value == second.title
+    assert app.header[0].value == second.title
 
     click(app, "▶ 実行")  # 初期コードで不合格 → ラベルに ✏️ が付く
     assert app.sidebar.selectbox[0].options[1].startswith("✏️")
     click(app, "▶ 実行")
     assert not app.exception
-    assert app.title[0].value == second.title
+    assert app.header[0].value == second.title
     assert any(c.value == "挑戦回数: 2" for c in app.caption)
 
 
@@ -154,7 +155,7 @@ def test_selection_survives_page_switch(app: AppTest) -> None:
     app.sidebar.selectbox[0].select_index(1).run()
     app.switch_page("pages/dashboard.py").run()
     app.switch_page("pages/exercise.py").run()
-    assert app.title[0].value == second.title
+    assert app.header[0].value == second.title
 
 
 def test_dashboard_todo_opens_exercise(app: AppTest) -> None:
@@ -162,7 +163,7 @@ def test_dashboard_todo_opens_exercise(app: AppTest) -> None:
     todo_buttons = [b for b in app.button if b.label == "解く"]
     todo_buttons[1].click().run()  # 何もしていなければカリキュラム順。2番目の問題を開く
     assert not app.exception
-    assert app.title[0].value == load_all().exercises[1].title
+    assert app.header[0].value == load_all().exercises[1].title
 
 
 def test_due_review_is_marked(isolated_db: Path) -> None:
@@ -179,7 +180,7 @@ def test_due_review_is_marked(isolated_db: Path) -> None:
 
 def test_playground_runs_code(app: AppTest) -> None:
     app.switch_page("pages/playground.py").run()
-    assert app.title[0].value == "自由に試す"
+    assert app.header[0].value == "自由に試す"
     click(app, "▶ 実行")
     assert not app.exception
     assert app.success[0].value.startswith("実行しました")

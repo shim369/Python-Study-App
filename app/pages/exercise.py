@@ -147,7 +147,7 @@ def select_exercise(
 
 
 def render_problem(exercise: Exercise, review: ReviewState | None) -> None:
-    st.title(exercise.title)
+    st.header(exercise.title)
     if review is not None and review.is_due(date.today()):
         st.info(
             f"🔁 復習の時期です({review.next_review_number}回目)。"
