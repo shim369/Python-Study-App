@@ -6,6 +6,7 @@ DB にも Streamlit にも依存しない純粋な計算だけを置き、単体
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from core.i18n import DEFAULT_LANG, Lang, Translator
 from core.models import Exercise
 from core.progress import ExerciseProgress, Status
 
@@ -60,16 +61,21 @@ def topic_mastery(
     return sorted(rows, key=lambda row: (row.level, row.topic))
 
 
-def format_duration(duration: timedelta) -> str:
+def format_duration(duration: timedelta, lang: Lang = DEFAULT_LANG) -> str:
     """「45秒」「12分」「3時間5分」「2日4時間」のように大まかな長さで表す。"""
+    t = Translator(lang)
     seconds = int(duration.total_seconds())
     if seconds < 60:
-        return f"{max(seconds, 0)}秒"
+        return t("duration.seconds", seconds=max(seconds, 0))
     minutes, _ = divmod(seconds, 60)
     if minutes < 60:
-        return f"{minutes}分"
+        return t("duration.minutes", minutes=minutes)
     hours, minutes = divmod(minutes, 60)
     if hours < 24:
-        return f"{hours}時間{minutes}分" if minutes else f"{hours}時間"
+        if minutes:
+            return t("duration.hours_minutes", hours=hours, minutes=minutes)
+        return t("duration.hours", hours=hours)
     days, hours = divmod(hours, 24)
-    return f"{days}日{hours}時間" if hours else f"{days}日"
+    return (
+        t("duration.days_hours", days=days, hours=hours) if hours else t("duration.days", days=days)
+    )

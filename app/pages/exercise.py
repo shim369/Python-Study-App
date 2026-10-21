@@ -15,6 +15,7 @@ from streamlit_ace import st_ace
 
 from ai.feedback import Feedback, FeedbackService, create_feedback_service
 from core.grading import grade
+from core.i18n import LANG_KEY, Translator, as_lang
 from core.loader import LoadResult, load_all
 from core.models import Exercise, GradeResult
 from core.practice import PracticeState
@@ -22,6 +23,7 @@ from core.progress import ProgressStore, db_path_from_env
 from core.srs import ReviewState, review_states
 
 logger = logging.getLogger(__name__)
+t = Translator(as_lang(st.session_state.get(LANG_KEY)))  # 画面の文言は t("キー") で引く
 
 
 @st.cache_resource
@@ -45,7 +47,7 @@ def open_store() -> ProgressStore | None:
         return ProgressStore(db_path_from_env())
     except (sqlite3.Error, OSError):
         logger.exception("進捗DBを開けません")
-        st.warning("進捗DBを開けないため、今回の結果は保存されません。ログを確認してください。")
+        st.warning(t("exercise.db_unavailable"))
         return None
 
 
@@ -57,7 +59,7 @@ def use_db[T](store: ProgressStore | None, action: Callable[[ProgressStore], T])
         return action(store)
     except sqlite3.Error:
         logger.exception("進捗DBの操作に失敗")
-        st.toast("進捗を保存・読み込みできませんでした。ログを確認してください。", icon="⚠️")
+        st.toast(t("exercise.db_failed"), icon="⚠️")
         return None
 
 
@@ -83,14 +85,31 @@ def mark_started(exercise: Exercise, store: ProgressStore | None) -> None:
 
 
 def editor_key(exercise: Exercise) -> str:
-    """エディタの key。版番号を上げると新しいウィジェットになり、初期コードに戻る。"""
+    """エディタの key。版番号か初期コードの言語が変わると、新しいエディタ(初期コード)になる。"""
     version: int = st.session_state.get(f"editor_version:{exercise.id}", 0)
-    return f"editor:{exercise.id}:{version}"
+    starter_lang = st.session_state.setdefault(f"editor_lang:{exercise.id}", t.lang)
+    return f"editor:{exercise.id}:{version}:{starter_lang}"
 
 
 def reset_editor(exercise: Exercise) -> None:
     version_key = f"editor_version:{exercise.id}"
     st.session_state[version_key] = st.session_state.get(version_key, 0) + 1
+    st.session_state[f"editor_lang:{exercise.id}"] = t.lang  # 戻すのは表示中の言語の初期コード
+
+
+def sync_editor_language(original: Exercise) -> None:
+    """言語を切り替えたとき、まだ何も書いていなければ初期コードを表示言語のものに差し替える。
+
+    書きかけのコードは消さない(そのときは前の言語の初期コードのコメントが残る)。
+    original は言語を切り替える前の Exercise(どちらの言語の初期コードも引ける)。
+    """
+    lang_key = f"editor_lang:{original.id}"
+    starter_lang = as_lang(st.session_state.get(lang_key, t.lang))
+    if starter_lang == t.lang:
+        return
+    code = st.session_state.get(editor_key(original))
+    if code is None or code == original.localized(starter_lang).starter_code:
+        st.session_state[lang_key] = t.lang
 
 
 def load_reviews(store: ProgressStore | None) -> dict[str, ReviewState]:
@@ -110,7 +129,7 @@ def exercise_label(
         mark = "✏️ "
     else:
         mark = ""
-    return f"{mark}L{exercise.level} {exercise.level_name} | {exercise.title}"
+    return f"{mark}L{exercise.level} {t(f'level.{exercise.level}')} | {exercise.title}"
 
 
 # 選択中の問題の id。ダッシュボードの「解く」ボタンもここに書き込む
@@ -118,8 +137,8 @@ CURRENT_EXERCISE_KEY = "current_exercise_id"
 _SELECTBOX_KEY = "_exercise_selectbox"
 
 
-def remember_selection() -> None:
-    st.session_state[CURRENT_EXERCISE_KEY] = st.session_state[_SELECTBOX_KEY]
+def remember_selection(selectbox_key: str) -> None:
+    st.session_state[CURRENT_EXERCISE_KEY] = st.session_state[selectbox_key]
 
 
 def select_exercise(
@@ -129,19 +148,22 @@ def select_exercise(
 
     widget の値は、その widget が無いページ(ダッシュボード)を表示すると消えてしまう。
     そこで選択は widget ではない別の key に保存し、表示のたびに widget へ書き戻す。
+    また selectbox は key が同じだと選択肢の表示名を更新しないので、言語ごとに key を分ける。
     """
     by_id = {ex.id: ex for ex in exercises}
+    selectbox_key = f"{_SELECTBOX_KEY}:{t.lang}"
     current = st.session_state.get(CURRENT_EXERCISE_KEY)
     if current in by_id:
-        st.session_state[_SELECTBOX_KEY] = current
+        st.session_state[selectbox_key] = current
     # ラベルは先に作っておく(format_func の中で毎回 session_state を引かずに済む)
     labels = {ex.id: exercise_label(ex, store, reviews.get(ex.id)) for ex in exercises}
     selected_id = st.sidebar.selectbox(
-        "問題",
+        t("exercise.select_label"),
         options=list(by_id),
         format_func=labels.__getitem__,
-        key=_SELECTBOX_KEY,
+        key=selectbox_key,
         on_change=remember_selection,
+        args=(selectbox_key,),
     )
     return by_id[selected_id]
 
@@ -149,15 +171,23 @@ def select_exercise(
 def render_problem(exercise: Exercise, review: ReviewState | None) -> None:
     st.header(exercise.title)
     if review is not None and review.is_due(date.today()):
-        st.info(
-            f"🔁 復習の時期です({review.next_review_number}回目)。"
-            "「初期コードに戻す」で、何も見ずにもう一度解いてみましょう。"
-        )
+        st.info(t("exercise.review_due", number=review.next_review_number))
     tags = " ".join(f"`{tag}`" for tag in exercise.tags)
-    st.caption(f"レベル{exercise.level}({exercise.level_name})・トピック: {exercise.topic}  {tags}")
+    level_name = t(f"level.{exercise.level}")
+    st.caption(
+        t(
+            "exercise.meta",
+            level=exercise.level,
+            level_name=level_name,
+            topic=exercise.topic,
+            tags=tags,
+        )
+    )
+    if t.lang == "en" and exercise.en is None:  # 英訳がまだ無い教材は日本語のまま表示する
+        st.caption(t("exercise.content_language_note"))
     st.markdown(exercise.description)
     if exercise.php_note:
-        with st.expander("🐘 PHPとの違い"):
+        with st.expander(t("exercise.php_note")):
             st.markdown(exercise.php_note)
 
 
@@ -169,11 +199,11 @@ def show_next_hint(
 
 
 def render_hints(exercise: Exercise, practice: PracticeState, store: ProgressStore | None) -> None:
-    st.subheader("ヒント")
+    st.subheader(t("exercise.hints"))
     for number, hint in enumerate(exercise.hints[: practice.hints_shown], start=1):
-        st.info(f"**ヒント{number}**: {hint}")
+        st.info(t("exercise.hint_item", number=number, hint=hint))
     if practice.has_more_hints:
-        label = f"ヒント{practice.hints_shown + 1}を見る(全{practice.total_hints}段階)"
+        label = t("exercise.show_hint", number=practice.hints_shown + 1, total=practice.total_hints)
         st.button(
             label,
             on_click=show_next_hint,
@@ -181,21 +211,23 @@ def render_hints(exercise: Exercise, practice: PracticeState, store: ProgressSto
             key=f"hint:{exercise.id}",
         )
     else:
-        st.caption("ヒントはこれで全部です。")
+        st.caption(t("exercise.no_more_hints"))
 
 
 def render_result(result: GradeResult) -> None:
     if result.passed:
-        st.success(f"🎉 合格!({result.passed_count}/{len(result.cases)} ケース)")
+        st.success(t("exercise.passed", passed=result.passed_count, total=len(result.cases)))
     elif result.timed_out:
-        st.error("⏱ タイムアウトしました。無限ループや重すぎる処理がないか確認しましょう。")
+        st.error(t("common.timeout"))
     else:
         detail = f" — {result.error_type}" if result.error_type else ""
-        st.error(f"不合格({result.passed_count}/{len(result.cases)} ケース){detail}")
+        st.error(
+            t("exercise.failed", passed=result.passed_count, total=len(result.cases), detail=detail)
+        )
 
-    st.caption(f"実行時間: {result.duration_ms} ms")
+    st.caption(t("exercise.duration", ms=result.duration_ms))
     if result.truncated:
-        st.warning("出力が多すぎたため、途中で切り詰めました。")
+        st.warning(t("common.truncated"))
 
     for case in result.cases:
         icon = "✅" if case.passed else "❌"
@@ -208,23 +240,23 @@ def render_result(result: GradeResult) -> None:
                 st.write("OK")
 
     if result.stdout.strip():
-        with st.expander("標準出力"):
+        with st.expander(t("common.stdout")):
             st.code(result.stdout, language="text")
     if result.stderr.strip():
-        with st.expander("標準エラー", expanded=not result.cases):
+        with st.expander(t("common.stderr"), expanded=not result.cases):
             st.code(result.stderr, language="text")
 
 
 def run_grading(
     exercise: Exercise, practice: PracticeState, store: ProgressStore | None, code: str
 ) -> None:
-    with st.spinner("実行中..."):
+    with st.spinner(t("common.running")):
         try:
             result = grade(exercise, code)
         except Exception:
             # 採点そのものが壊れた場合(アプリ側の不具合)。学習者のせいではないことを伝える
             logger.exception("採点中に予期しないエラー: %s", exercise.id)
-            st.error("採点中にアプリ側でエラーが起きました。ターミナルのログを確認してください。")
+            st.error(t("exercise.grading_error"))
             return
     practice.record(result, code)
     use_db(store, lambda s: s.record_attempt(exercise.id, result))
@@ -239,51 +271,53 @@ def ai_log(exercise: Exercise) -> list[tuple[str, Feedback]]:
 
 
 def render_ai_assistant(exercise: Exercise, practice: PracticeState, code: str) -> None:
-    st.subheader("🤖 AIアシスタント")
+    st.subheader(t("exercise.ai_title"))
     service = get_feedback_service()
     if service is None:
-        st.caption(
-            "AI機能は無効です。.env に GEMINI_API_KEY を設定して再起動すると、"
-            "AIのヒント・エラー解説・コードレビューが使えます。"
-        )
+        st.caption(t("exercise.ai_disabled"))
         return
 
     hint_col, explain_col, review_col = st.columns(3)
     level = practice.next_ai_hint_level
     hint_clicked = hint_col.button(
-        f"AIヒント({level}/{practice.total_hints})" if level else "AIヒントは使い切りました",
+        (
+            t("exercise.ai_hint", level=level, total=practice.total_hints)
+            if level
+            else t("exercise.ai_hint_used_up")
+        ),
         disabled=level is None,
         width="stretch",
     )
     explain_clicked = explain_col.button(
-        "不合格の原因を考える",
+        t("exercise.ai_explain"),
         disabled=not practice.can_explain_failure,
-        help="直近の実行が不合格のときに使えます",
+        help=t("exercise.ai_explain_help"),
         width="stretch",
     )
     review_clicked = review_col.button(
-        "コードレビュー",
+        t("exercise.ai_review"),
         disabled=not practice.can_request_review,
-        help="直近の実行で合格したコードをレビューします",
+        help=t("exercise.ai_review_help"),
         width="stretch",
     )
 
     log = ai_log(exercise)
     if hint_clicked or explain_clicked or review_clicked:
-        with st.spinner("AI が考えています..."):
+        with st.spinner(t("common.ai_thinking")):
             if hint_clicked and level is not None:
                 # ヒントは「いま書いている途中のコード」を見てもらう
-                feedback = service.hint(exercise, code, level, practice.last_result)
+                feedback = service.hint(exercise, code, level, practice.last_result, t.lang)
                 if feedback.text:
                     practice.use_ai_hint()  # 失敗した回は段階を進めない
-                log.append((f"AIヒント(段階{level})", feedback))
+                log.append((t("exercise.ai_log_hint", level=level), feedback))
             elif explain_clicked and practice.last_result is not None:
                 feedback = service.explain_failure(
-                    exercise, practice.last_code, practice.last_result
+                    exercise, practice.last_code, practice.last_result, t.lang
                 )
-                log.append(("不合格の原因", feedback))
+                log.append((t("exercise.ai_log_explain"), feedback))
             elif review_clicked:
-                log.append(("コードレビュー", service.review(exercise, practice.last_code)))
+                feedback = service.review(exercise, practice.last_code, t.lang)
+                log.append((t("exercise.ai_log_review"), feedback))
         # ボタンは押される前の状態で描画済み。「AIヒント(2/3)」などの表示を更新するため描き直す
         st.rerun()
 
@@ -293,20 +327,20 @@ def render_ai_assistant(exercise: Exercise, practice: PracticeState, code: str) 
             if feedback.text:
                 st.markdown(feedback.text)
             else:
-                st.error(feedback.error or "AI から回答が得られませんでした。")
+                st.error(feedback.error or t("common.ai_no_answer"))
     if log:
-        st.caption("AI の回答は誤っていることもあります。鵜呑みにせず、実行して確かめましょう。")
+        st.caption(t("exercise.ai_caution"))
 
 
 def render_solution(
     exercise: Exercise, practice: PracticeState, store: ProgressStore | None
 ) -> None:
-    st.subheader("模範解答")
+    st.subheader(t("exercise.solution"))
     if practice.can_view_solution:
         st.code(exercise.solution, language="python")
         return
-    st.caption("合格すると表示されます。どうしても分からないときだけ開きましょう。")
-    if st.button("模範解答を見る", key=f"reveal:{exercise.id}"):
+    st.caption(t("exercise.solution_locked"))
+    if st.button(t("exercise.show_solution"), key=f"reveal:{exercise.id}"):
         practice.reveal_solution()
         use_db(store, lambda s: s.record_solution_viewed(exercise.id))
         st.rerun()
@@ -315,21 +349,23 @@ def render_solution(
 def main() -> None:
     loaded = load_exercises()
     for error in loaded.errors:
-        st.sidebar.error(f"教材の読み込みに失敗: {error.path.parent.name}\n\n{error.reason}")
+        st.sidebar.error(t("exercise.load_error", name=error.path.parent.name, reason=error.reason))
     if not loaded.exercises:
-        st.warning("演習がありません。exercises/ に教材を追加してください。")
+        st.warning(t("exercise.no_exercises"))
         return
 
+    exercises = [ex.localized(t.lang) for ex in loaded.exercises]  # 問題文などを表示言語に
     store = open_store()
     reviews = load_reviews(store)
-    exercise = select_exercise(loaded.exercises, store, reviews)
+    exercise = select_exercise(exercises, store, reviews)
+    sync_editor_language(next(ex for ex in loaded.exercises if ex.id == exercise.id))
     practice = get_practice(exercise, store)
     mark_started(exercise, store)
 
     left, right = st.columns([1, 1], gap="large")
     # 右(エディタ・実行)を先に処理する。合格した同じ実行のうちに左の模範解答を表示するため
     with right:
-        st.subheader("コード")
+        st.subheader(t("exercise.code"))
         # auto_update=True: 入力の度に値が送られるので「実行」時に最新のコードが使われる
         code: str = st_ace(
             value=exercise.starter_code,
@@ -342,9 +378,9 @@ def main() -> None:
             key=editor_key(exercise),
         )
         run_col, reset_col = st.columns([1, 1])
-        run_clicked = run_col.button("▶ 実行", type="primary", width="stretch")
+        run_clicked = run_col.button(t("common.run"), type="primary", width="stretch")
         reset_col.button(
-            "初期コードに戻す",
+            t("exercise.reset"),
             on_click=reset_editor,
             args=(exercise,),
             width="stretch",
@@ -352,7 +388,7 @@ def main() -> None:
         if run_clicked:
             run_grading(exercise, practice, store, code)
         if practice.last_result is not None:
-            st.caption(f"挑戦回数: {practice.attempts}")
+            st.caption(t("exercise.attempts", count=practice.attempts))
             render_result(practice.last_result)
         render_ai_assistant(exercise, practice, code)
 

@@ -87,3 +87,15 @@ def test_mastery_ratio() -> None:
 )
 def test_format_duration(duration: timedelta, expected: str) -> None:
     assert format_duration(duration) == expected
+
+
+@pytest.mark.parametrize(
+    ("duration", "expected"),
+    [
+        (timedelta(seconds=45), "45s"),
+        (timedelta(hours=3, minutes=5), "3h 5m"),
+        (timedelta(days=2, hours=4), "2d 4h"),
+    ],
+)
+def test_format_duration_in_english(duration: timedelta, expected: str) -> None:
+    assert format_duration(duration, "en") == expected

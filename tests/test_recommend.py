@@ -114,3 +114,9 @@ def test_recommend_limit_and_fresh_start() -> None:
     exercises = [make_exercise(f"l1-00{n}-x", "t") for n in range(1, 6)]
     result = recommend(exercises, {}, {}, TODAY, limit=2)
     assert [r.exercise.id for r in result] == ["l1-001-x", "l1-002-x"]
+
+
+def test_recommend_reason_in_english() -> None:
+    exercises = [make_exercise("l1-001-x", "t")]
+    result = recommend(exercises, {}, {}, TODAY, lang="en")
+    assert result[0].reason == "🆕 Next exercise"

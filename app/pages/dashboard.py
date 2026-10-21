@@ -12,6 +12,7 @@ import streamlit as st
 
 from core.dashboard import format_duration, status_of, study_streak, topic_mastery
 from core.export import attempts_to_csv, progress_to_json
+from core.i18n import LANG_KEY, Translator, as_lang
 from core.loader import load_all
 from core.models import Exercise
 from core.progress import AttemptRecord, ExerciseProgress, ProgressStore, Status, db_path_from_env
@@ -19,6 +20,7 @@ from core.recommend import recommend, weak_topics
 from core.srs import ReviewState, review_states
 
 logger = logging.getLogger(__name__)
+t = Translator(as_lang(st.session_state.get(LANG_KEY)))  # 画面の文言は t("キー") で引く
 
 RECENT_LIMIT = 15
 RECOMMEND_LIMIT = 5
@@ -32,9 +34,10 @@ def render_summary(
     attempts_total = sum(p.attempts for p in progress.values())
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("合格した問題", f"{passed} / {len(exercises)}")
-    col2.metric("連続学習日数", f"{study_streak(study_dates, date.today())} 日")
-    col3.metric("総挑戦回数", f"{attempts_total} 回")
+    col1.metric(t("dashboard.passed_count"), f"{passed} / {len(exercises)}")
+    streak = study_streak(study_dates, date.today())
+    col2.metric(t("dashboard.streak"), t("dashboard.streak_value", days=streak))
+    col3.metric(t("dashboard.attempts_total"), t("dashboard.attempts_value", count=attempts_total))
 
 
 def open_exercise(exercise_id: str) -> None:
@@ -48,40 +51,50 @@ def render_todo(
     progress: dict[str, ExerciseProgress],
     reviews: dict[str, ReviewState],
 ) -> None:
-    st.subheader("今日やること")
-    recommendations = recommend(exercises, progress, reviews, date.today(), RECOMMEND_LIMIT)
+    st.subheader(t("dashboard.todo"))
+    recommendations = recommend(
+        exercises, progress, reviews, date.today(), RECOMMEND_LIMIT, lang=t.lang
+    )
     if not recommendations:
-        st.success("全問合格・復習も完了しています!新しい演習を追加しましょう。")
+        st.success(t("dashboard.all_done"))
         return
     for item in recommendations:
         reason_col, title_col, button_col = st.columns([2, 5, 1], vertical_alignment="center")
         reason_col.write(item.reason)
         title_col.write(f"L{item.exercise.level} {item.exercise.title}")
-        if button_col.button("解く", key=f"todo:{item.exercise.id}"):
+        if button_col.button(t("dashboard.solve"), key=f"todo:{item.exercise.id}"):
             open_exercise(item.exercise.id)
 
 
 def render_weak_topics(exercises: list[Exercise], progress: dict[str, ExerciseProgress]) -> None:
-    st.subheader("苦手トピック")
+    st.subheader(t("dashboard.weak_topics"))
     weak = weak_topics(exercises, progress)
     if not weak:
-        st.caption("今のところ苦手なトピックはありません。")
+        st.caption(t("dashboard.no_weak_topics"))
         return
     st.dataframe(
-        [{"トピック": w.topic, "苦手度": round(w.score, 1), "挑戦した問題": w.tried} for w in weak],
+        [
+            {
+                t("dashboard.col.topic"): w.topic,
+                t("dashboard.col.weak_score"): round(w.score, 1),
+                t("dashboard.col.tried"): w.tried,
+            }
+            for w in weak
+        ],
         hide_index=True,
     )
-    st.caption("苦手度 = 1問あたりの(不合格の回数 + ヒント使用数 + 模範解答を見たら3)の平均")
+    st.caption(t("dashboard.weak_score_note"))
 
 
 def render_topic_mastery(exercises: list[Exercise], progress: dict[str, ExerciseProgress]) -> None:
-    st.subheader("トピック別習熟度")
+    st.subheader(t("dashboard.mastery"))
+    mastery_col = t("dashboard.col.mastery")
     rows = [
         {
-            "レベル": row.level,
-            "トピック": row.topic,
-            "合格 / 問題数": f"{row.passed} / {row.total}",
-            "習熟度": row.ratio,
+            t("dashboard.col.level"): row.level,
+            t("dashboard.col.topic"): row.topic,
+            t("dashboard.col.passed_total"): f"{row.passed} / {row.total}",
+            mastery_col: row.ratio,
         }
         for row in topic_mastery(exercises, progress)
     ]
@@ -89,7 +102,7 @@ def render_topic_mastery(exercises: list[Exercise], progress: dict[str, Exercise
         rows,
         hide_index=True,
         column_config={
-            "習熟度": st.column_config.ProgressColumn(
+            mastery_col: st.column_config.ProgressColumn(
                 min_value=0.0, max_value=1.0, format="percent"
             )
         },
@@ -100,8 +113,10 @@ def review_label(review: ReviewState | None) -> str:
     if review is None:
         return ""
     if review.completed:
-        return "完了"
-    return f"{review.next_review_number}回目: {review.due_date:%m/%d}"
+        return t("dashboard.review_done")
+    return t(
+        "dashboard.review_next", number=review.next_review_number, date=f"{review.due_date:%m/%d}"
+    )
 
 
 def render_exercise_table(
@@ -109,7 +124,7 @@ def render_exercise_table(
     progress: dict[str, ExerciseProgress],
     reviews: dict[str, ReviewState],
 ) -> None:
-    st.subheader("問題ごとの状態")
+    st.subheader(t("dashboard.exercise_table"))
     rows = []
     for exercise in exercises:
         found = progress.get(exercise.id)
@@ -117,37 +132,40 @@ def render_exercise_table(
         time_to_pass = found.time_to_pass if found else None
         rows.append(
             {
-                "状態": f"{STATUS_ICONS[status]} {status}",
-                "レベル": exercise.level,
-                "問題": exercise.title,
-                "挑戦回数": found.attempts if found else 0,
-                "ヒント使用": found.hints_used if found else 0,
-                "模範解答を見た": "👀" if found and found.solution_viewed else "",
-                "合格までの時間": format_duration(time_to_pass) if time_to_pass else "",
-                "次の復習": review_label(reviews.get(exercise.id)),
+                t("dashboard.col.status"): f"{STATUS_ICONS[status]} {t(f'status.{status.name}')}",
+                t("dashboard.col.level"): exercise.level,
+                t("dashboard.col.exercise"): exercise.title,
+                t("dashboard.col.attempts"): found.attempts if found else 0,
+                t("dashboard.col.hints_used"): found.hints_used if found else 0,
+                t("dashboard.col.solution_viewed"): "👀" if found and found.solution_viewed else "",
+                t("dashboard.col.time_to_pass"): (
+                    format_duration(time_to_pass, t.lang) if time_to_pass else ""
+                ),
+                t("dashboard.col.next_review"): review_label(reviews.get(exercise.id)),
             }
         )
     st.dataframe(rows, hide_index=True)
-    st.caption(
-        "合格までの時間 = 問題を初めて開いてから、初めて合格するまで / "
-        "復習 = 初合格の1日後・3日後・7日後"
-    )
+    st.caption(t("dashboard.table_note"))
 
 
 def render_recent_attempts(exercises: list[Exercise], attempts: list[AttemptRecord]) -> None:
-    st.subheader("直近の学習履歴")
+    st.subheader(t("dashboard.recent"))
     if not attempts:
-        st.info("まだ履歴がありません。「演習」ページで問題を解いてみましょう。")
+        st.info(t("dashboard.no_history"))
         return
     titles = {ex.id: ex.title for ex in exercises}
     rows = [
         {
-            "日時": attempt.attempted_at.astimezone().strftime("%Y-%m-%d %H:%M"),
+            t("dashboard.col.datetime"): attempt.attempted_at.astimezone().strftime(
+                "%Y-%m-%d %H:%M"
+            ),
             # 教材が削除・改名された場合は id のまま表示する
-            "問題": titles.get(attempt.exercise_id, attempt.exercise_id),
-            "結果": "✅ 合格" if attempt.passed else "❌ 不合格",
-            "エラー": attempt.error_type or "",
-            "実行時間(ms)": attempt.duration_ms,
+            t("dashboard.col.exercise"): titles.get(attempt.exercise_id, attempt.exercise_id),
+            t("dashboard.col.result"): t(
+                "dashboard.result_passed" if attempt.passed else "dashboard.result_failed"
+            ),
+            t("dashboard.col.error"): attempt.error_type or "",
+            t("dashboard.col.duration_ms"): attempt.duration_ms,
         }
         for attempt in attempts
     ]
@@ -160,18 +178,18 @@ def render_export(
     history: dict[str, list[AttemptRecord]],
     reviews: dict[str, ReviewState],
 ) -> None:
-    st.subheader("学習ログのエクスポート")
+    st.subheader(t("dashboard.export"))
     stamp = f"{datetime.now():%Y%m%d}"
     csv_col, json_col = st.columns(2)
     csv_col.download_button(
-        "挑戦履歴(CSV)",
+        t("dashboard.export_csv"),
         data=attempts_to_csv(exercises, history),
         file_name=f"study-attempts-{stamp}.csv",
         mime="text/csv",
         width="stretch",
     )
     json_col.download_button(
-        "進捗と履歴(JSON)",
+        t("dashboard.export_json"),
         data=progress_to_json(exercises, progress, history, reviews, datetime.now()),
         file_name=f"study-progress-{stamp}.json",
         mime="application/json",
@@ -180,8 +198,8 @@ def render_export(
 
 
 def main() -> None:
-    st.header("ダッシュボード")
-    exercises = load_all().exercises
+    st.header(t("dashboard.title"))
+    exercises = [ex.localized(t.lang) for ex in load_all().exercises]  # 問題名を表示言語に
     try:
         store = ProgressStore(db_path_from_env())
         progress = store.all_progress()
@@ -191,7 +209,7 @@ def main() -> None:
         reviews = review_states(history)
     except (sqlite3.Error, OSError):
         logger.exception("進捗DBの読み込みに失敗")
-        st.error("進捗DBを読み込めませんでした。ターミナルのログを確認してください。")
+        st.error(t("dashboard.db_error"))
         return
 
     render_summary(exercises, progress, study_dates)

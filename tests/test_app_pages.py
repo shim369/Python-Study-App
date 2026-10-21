@@ -15,7 +15,7 @@ from core.progress import ProgressStore
 
 MAIN_SCRIPT = Path(__file__).resolve().parent.parent / "app" / "main.py"
 FIRST = load_all().exercises[0]
-EDITOR_KEY = f"editor:{FIRST.id}:0"
+EDITOR_KEY = f"editor:{FIRST.id}:0:ja"  # 版番号 0・日本語の初期コード
 
 
 @pytest.fixture(autouse=True)
@@ -200,3 +200,39 @@ def test_dashboard_has_export_buttons(app: AppTest) -> None:
     # download_button 専用の取得メソッドが無いので、要素の種類で探して proto からラベルを読む
     labels = [e.proto.label for e in app.get("download_button")]
     assert labels == ["挑戦履歴(CSV)", "進捗と履歴(JSON)"]
+
+
+def test_switch_to_english(app: AppTest) -> None:
+    """言語を切り替えると、どのページの文言も英語になる。"""
+    app.sidebar.segmented_control[0].set_value("en").run()
+    assert not app.exception
+    assert any(b.label == "▶ Run" for b in app.button)
+    assert FIRST.en is not None
+    assert app.header[0].value == FIRST.en.title  # 問題文も英語になる
+    # AppTest では言語を切り替えた後の実行で切り替えボタンが要素ツリーから消え、
+    # 選択が日本語に戻ってしまう(ブラウザでは起きない)。そのため実行のたびに言語を指定する
+    app.session_state["lang"] = "en"
+    click(app, "▶ Run")
+    assert app.error[0].value.startswith("Failed")
+
+    app.session_state["lang"] = "en"
+    app.switch_page("pages/dashboard.py").run()
+    assert app.header[0].value == "Dashboard"
+    app.session_state["lang"] = "en"
+    app.switch_page("pages/playground.py").run()
+    assert app.header[0].value == "Playground"
+
+
+EDITOR_LANG_KEY = f"editor_lang:{FIRST.id}"
+
+
+def test_untouched_editor_switches_to_english_starter(app: AppTest) -> None:
+    app.sidebar.segmented_control[0].set_value("en").run()
+    assert app.session_state[EDITOR_LANG_KEY] == "en"  # 英語の初期コードのエディタに替わる
+
+
+def test_typed_code_is_kept_when_switching_language(app: AppTest) -> None:
+    app.session_state[EDITOR_KEY] = "x = 1"  # 書きかけのコード
+    app.sidebar.segmented_control[0].set_value("en").run()
+    assert app.session_state[EDITOR_LANG_KEY] == "ja"  # エディタは替えない
+    assert app.session_state[EDITOR_KEY] == "x = 1"

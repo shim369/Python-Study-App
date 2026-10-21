@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from core.dashboard import status_of
+from core.i18n import DEFAULT_LANG, Lang, Translator
 from core.models import Exercise
 from core.progress import ExerciseProgress, Status
 from core.srs import ReviewState
@@ -62,6 +63,7 @@ def recommend(
     reviews: dict[str, ReviewState],
     today: date,
     limit: int = 5,
+    lang: Lang = DEFAULT_LANG,
 ) -> list[Recommendation]:
     """次に解くべき問題を、優先度の高い順に最大 limit 件返す。
 
@@ -79,15 +81,19 @@ def recommend(
     in_progress = [ex for ex in exercises if status_of(ex.id, progress) is Status.IN_PROGRESS]
     not_started = [ex for ex in exercises if status_of(ex.id, progress) is Status.NOT_STARTED]
     weak = {w.topic for w in weak_topics(exercises, progress)}
+    t = Translator(lang)  # reason は画面にそのまま表示する文言なので、表示する言語で作る
 
     candidates = [
-        *(Recommendation(ex, f"🔁 復習({reviews[ex.id].next_review_number}回目)") for ex in due),
-        *(Recommendation(ex, "✏️ 挑戦中") for ex in in_progress),
         *(
-            Recommendation(ex, f"💪 苦手トピック「{ex.topic}」")
+            Recommendation(ex, t("recommend.review", number=reviews[ex.id].next_review_number))
+            for ex in due
+        ),
+        *(Recommendation(ex, t("recommend.in_progress")) for ex in in_progress),
+        *(
+            Recommendation(ex, t("recommend.weak_topic", topic=ex.topic))
             for ex in not_started
             if ex.topic in weak
         ),
-        *(Recommendation(ex, "🆕 次の問題") for ex in not_started if ex.topic not in weak),
+        *(Recommendation(ex, t("recommend.next")) for ex in not_started if ex.topic not in weak),
     ]
     return candidates[:limit]
