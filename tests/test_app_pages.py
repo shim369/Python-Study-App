@@ -98,7 +98,7 @@ def test_dashboard_shows_progress(app: AppTest) -> None:
     app.session_state[EDITOR_KEY] = FIRST.solution
     click(app, "▶ 実行")
 
-    app.switch_page("pages/dashboard.py").run()
+    app.switch_page("views/dashboard.py").run()
     assert not app.exception
     assert app.header[0].value == "ダッシュボード"
     assert app.metric[0].value.startswith("1 /")  # 合格した問題
@@ -153,13 +153,13 @@ def test_selection_is_kept_when_label_changes(app: AppTest) -> None:
 def test_selection_survives_page_switch(app: AppTest) -> None:
     second = load_all().exercises[1]
     app.sidebar.selectbox[0].select_index(1).run()
-    app.switch_page("pages/dashboard.py").run()
-    app.switch_page("pages/exercise.py").run()
+    app.switch_page("views/dashboard.py").run()
+    app.switch_page("views/exercise.py").run()
     assert app.header[0].value == second.title
 
 
 def test_dashboard_todo_opens_exercise(app: AppTest) -> None:
-    app.switch_page("pages/dashboard.py").run()
+    app.switch_page("views/dashboard.py").run()
     todo_buttons = [b for b in app.button if b.label == "解く"]
     todo_buttons[1].click().run()  # 何もしていなければカリキュラム順。2番目の問題を開く
     assert not app.exception
@@ -174,12 +174,12 @@ def test_due_review_is_marked(isolated_db: Path) -> None:
     assert app.sidebar.selectbox[0].options[0].startswith("🔁")
     assert any("復習の時期です(1回目)" in i.value for i in app.info)
 
-    app.switch_page("pages/dashboard.py").run()
+    app.switch_page("views/dashboard.py").run()
     assert any(m.value == "🔁 復習(1回目)" for m in app.markdown)
 
 
 def test_playground_runs_code(app: AppTest) -> None:
-    app.switch_page("pages/playground.py").run()
+    app.switch_page("views/playground.py").run()
     assert app.header[0].value == "自由に試す"
     click(app, "▶ 実行")
     assert not app.exception
@@ -190,13 +190,13 @@ def test_playground_runs_code(app: AppTest) -> None:
 
 def test_playground_ai_review(monkeypatch: pytest.MonkeyPatch, app: AppTest) -> None:
     monkeypatch.setattr(ai.feedback, "create_client", FakeGenerator)
-    app.switch_page("pages/playground.py").run()
+    app.switch_page("views/playground.py").run()
     click(app, "このコードをレビューしてもらう")
     assert any(m.value == "AIの回答です" for m in app.markdown)
 
 
 def test_dashboard_has_export_buttons(app: AppTest) -> None:
-    app.switch_page("pages/dashboard.py").run()
+    app.switch_page("views/dashboard.py").run()
     # download_button 専用の取得メソッドが無いので、要素の種類で探して proto からラベルを読む
     labels = [e.proto.label for e in app.get("download_button")]
     assert labels == ["挑戦履歴(CSV)", "進捗と履歴(JSON)"]
@@ -216,10 +216,10 @@ def test_switch_to_english(app: AppTest) -> None:
     assert app.error[0].value.startswith("Failed")
 
     app.session_state["lang"] = "en"
-    app.switch_page("pages/dashboard.py").run()
+    app.switch_page("views/dashboard.py").run()
     assert app.header[0].value == "Dashboard"
     app.session_state["lang"] = "en"
-    app.switch_page("pages/playground.py").run()
+    app.switch_page("views/playground.py").run()
     assert app.header[0].value == "Playground"
 
 

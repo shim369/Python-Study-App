@@ -43,7 +43,7 @@ def render_summary(
 def open_exercise(exercise_id: str) -> None:
     """演習ページの「選択中の問題」を書き換えてから移動する。"""
     st.session_state["current_exercise_id"] = exercise_id
-    st.switch_page("pages/exercise.py")
+    st.switch_page("views/exercise.py")
 
 
 def render_todo(

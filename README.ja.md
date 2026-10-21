@@ -120,7 +120,7 @@ flowchart LR
 ### ディレクトリ構成
 
 ```
-app/            Streamlit UI(main.py とページ)
+app/            Streamlit UI(main.py と views/ のページ)
 core/           採点・進捗・復習・おすすめ・エクスポート
 runner/         学習者コードの隔離実行
 ai/             Gemini クライアントとフィードバック生成

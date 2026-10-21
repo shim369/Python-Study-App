@@ -124,7 +124,7 @@ flowchart LR
 ### Directory layout
 
 ```
-app/            Streamlit UI (main.py and pages)
+app/            Streamlit UI (main.py and the pages in views/)
 core/           grading, progress, reviews, recommendations, export, i18n
 runner/         isolated execution of learner code
 ai/             Gemini client and feedback generation

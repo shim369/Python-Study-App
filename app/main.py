@@ -31,11 +31,13 @@ st.set_page_config(page_title="Python-Study-App", page_icon="🐍", layout="wide
 # ボタンを押した後の再実行では、widget を描画する前から session_state に新しい値が入っている
 t = Translator(as_lang(st.session_state.get(LANG_KEY)))
 
+# ページのファイルは app/views/ に置く。app/pages/ という名前にすると、Streamlit が自動で
+# ページ一覧を作る機能が働き、起動直後に /dashboard などを直接開くとこの st.navigation が使われない
 page = st.navigation(
     [
-        st.Page("pages/exercise.py", title=t("nav.exercise"), default=True),
-        st.Page("pages/dashboard.py", title=t("nav.dashboard")),
-        st.Page("pages/playground.py", title=t("nav.playground")),
+        st.Page("views/exercise.py", title=t("nav.exercise"), default=True),
+        st.Page("views/dashboard.py", title=t("nav.dashboard")),
+        st.Page("views/playground.py", title=t("nav.playground")),
     ]
 )
 # 言語の切り替えボタンは st.navigation の後に置く。前に置くと、サーバー起動直後の最初の実行中に
