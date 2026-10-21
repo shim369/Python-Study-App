@@ -13,7 +13,8 @@ Pythonコードを書いて実行 → 自動採点 → AIフィードバック�
 - `core/` ドメインロジック(採点・進捗・間隔反復・おすすめ・エクスポート)。**Streamlitをimportしない**
 - `runner/` 学習者コードの隔離実行(subprocess + タイムアウト + 出力上限)
 - `ai/` Gemini APIクライアントとフィードバック生成(キー未設定・失敗時もアプリは落ちない)
-- `prompts/` AIプロンプト(**コード内にプロンプト文をハードコードしない**)
+- `prompts/{ja,en}/` AIプロンプト(**コード内にプロンプト文をハードコードしない**。両言語で同じ `$変数` を揃える)
+- `locales/` 画面の文言(`ja.yaml` / `en.yaml`、キーで参照。`core/i18n.py`)
 - `exercises/level{N}/<NNN_slug>/` 教材(`exercise.yaml` + `test_solution.py`)
 - `scripts/verify_solutions.py` 全演習の模範解答検証
 

@@ -3,6 +3,9 @@ name = "Python-Study-App"
 version = "0.1.0"
 description = "コードを書いて実行・自動採点・AIフィードバックでPythonを身につける学習アプリ"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Shimpei Ohtani" }]
 requires-python = ">=3.12"
 dependencies = [
     "google-genai>=2.31.0",

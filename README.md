@@ -1,182 +1,198 @@
 # Python-Study-App
 
-**コードを書く → 実行 → 自動採点 → AIフィードバック** のループで、Python を「書ける」から
-「使いこなせる」へ引き上げるための、ローカル専用の学習Webアプリです。
+**English** | [日本語](README.ja.md)
 
-PHP での実務経験がある学習者を想定し、各演習に「PHPではこう書くが、Pythonではこう書く」
-という対比メモを付けています。
+A local-only web app for learning Python through a loop of **write code → run → automatic grading → AI feedback**,
+taking you from "can write Python" to "fluent in Python".
 
-![演習ページ:お題を読み、右側のエディタでコードを書いて実行する](images/main.png)
+It is aimed at learners with professional PHP experience: every exercise comes with a note contrasting
+"how you'd write it in PHP" with "how you write it in Python".
 
-## 主な機能
+![Exercise page: read the task and write and run code in the editor on the right](images/main.png)
 
-| 機能 | 内容 |
+## Features
+
+| Feature | Description |
 |---|---|
-| ✍️ コーディング演習 | 20問(4レベル)。お題を読み、エディタで書いて「▶ 実行」すると pytest / 標準入出力で自動採点 |
-| 💡 3段階ヒント | 教材のヒントを1段階ずつ開示。模範解答は合格後(または明示的に「見る」を押した後)だけ表示 |
-| 🤖 AIフィードバック | Gemini API による段階的ヒント・不合格の原因解説・合格後のコードレビュー(答えのコードは出さない) |
-| 📊 ダッシュボード | 合格数・連続学習日数・トピック別習熟度・苦手トピック・問題ごとの状態・学習履歴 |
-| 🔁 復習(間隔反復) | 合格した問題を 1日後 → 3日後 → 7日後 に再出題。「今日やること」でおすすめを表示 |
-| 🧪 自由に試す | お題なしでコードを実行し、AI にレビューしてもらえる |
-| 📤 エクスポート | 学習ログを CSV(Excel対応)・JSON でダウンロード |
+| ✍️ Coding exercises | 20 exercises (4 levels). Read the task, write code in the editor and press "▶ Run" to have it graded automatically with pytest / standard I/O |
+| 💡 3-level hints | Exercise hints are revealed one level at a time. The model solution is shown only after you pass (or explicitly choose to view it) |
+| 🤖 AI feedback | Step-by-step hints, failure explanations and post-pass code reviews via the Gemini API (it never gives away the solution code) |
+| 📊 Dashboard | Exercises passed, study streak, mastery by topic, weak topics, per-exercise status and study history |
+| 🔁 Review (spaced repetition) | Exercises you've passed come back after 1 → 3 → 7 days. "To do today" shows recommendations |
+| 🧪 Playground | Run code without an exercise and have the AI review it |
+| 📤 Export | Download your study log as CSV (Excel-compatible) or JSON |
+| 🌐 English / 日本語 | A sidebar button switches the language of the UI, the exercises and the AI's answers |
 
-### 教材(20問)
+### Exercises (20)
 
-| レベル | トピック |
+| Level | Topics |
 |---|---|
-| 1 基礎 | dict / 制御構文(標準入出力) / 文字列 / set / 関数(デフォルト引数のバグ修正) |
-| 2 中級 | ジェネレータ / 内包表記 / デコレータ / コンテキストマネージャ / dataclass と独自例外 |
-| 3 標準ライブラリ | pathlib / collections / itertools / datetime / re |
-| 4 実務 | argparse(CLI) / asyncio / urllib.parse(HTTP) / テストしやすい設計 / json(設定の検証) |
+| 1 Basics | dict / control flow (standard I/O) / strings / set / functions (fixing a default-argument bug) |
+| 2 Intermediate | generators / comprehensions / decorators / context managers / dataclasses and custom exceptions |
+| 3 Standard library | pathlib / collections / itertools / datetime / re |
+| 4 Practical | argparse (CLI) / asyncio / urllib.parse (HTTP) / designing for testability / json (config validation) |
 
-## セットアップ
+## Setup
 
-必要なものは [uv](https://docs.astral.sh/uv/) だけです(Python 3.12 は uv が自動で用意します)。
-macOS で動作確認しています。Linux でも動く想定です。**Windows では動きません**
-(コード実行の制限に、Windows に無い `resource` モジュールを使っているため。WSL2 なら動く想定です)。
+All you need is [uv](https://docs.astral.sh/uv/) (uv sets up Python 3.12 for you).
+Tested on macOS, and expected to work on Linux. **It does not work on Windows**
+(code execution limits use the `resource` module, which Windows lacks; it should work under WSL2).
 
 ```bash
-# uv が無ければインストール(macOS / Linux)
+# Install uv if you don't have it (macOS / Linux)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 git clone https://github.com/shim369/Python-Study-App.git
 cd Python-Study-App
-uv sync                               # 依存パッケージをインストール
-uv run streamlit run app/main.py      # 起動 → ブラウザで http://localhost:8501 が開く
+uv sync                               # install dependencies
+uv run streamlit run app/main.py      # start → http://localhost:8501 opens in your browser
 ```
 
-### AI機能を使う場合(任意)
+The UI starts in Japanese. Switch to English with the "日本語 / English" button at the top of the sidebar.
 
-AI機能が無くても、演習・採点・ダッシュボードはすべて使えます。
+### Using the AI features (optional)
 
-1. [Google AI Studio](https://aistudio.google.com/apikey) で Gemini の APIキーを無料で発行する
-2. 設定ファイルを作り、`GEMINI_API_KEY=` の後ろにキーを書く
+Exercises, grading and the dashboard all work without the AI features.
+
+1. Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
+2. Create the config file and put your key after `GEMINI_API_KEY=`
    ```bash
    cp .env.example .env
    ```
-3. アプリを再起動する
+3. Restart the app
 
-| 環境変数 | 内容 | 省略時 |
+| Environment variable | Description | Default |
 |---|---|---|
-| `GEMINI_API_KEY` | Gemini の APIキー | AI機能が無効になる |
-| `GEMINI_MODEL` | 使うモデル。混雑時やエラーが続くときは `gemini-3.5-flash-lite` などに変える | `gemini-3.8-flash` |
-| `STUDY_APP_DB_PATH` | 進捗を保存する SQLite ファイル(相対パスはプロジェクト直下から) | `data/app.db` |
+| `GEMINI_API_KEY` | Gemini API key | AI features are disabled |
+| `GEMINI_MODEL` | Model to use. If it's busy or errors keep happening, switch to something like `gemini-3.5-flash-lite` | `gemini-3.8-flash` |
+| `STUDY_APP_DB_PATH` | SQLite file for storing progress (relative paths are from the project root) | `data/app.db` |
 
-> **注意**: Gemini API の無料枠では、送信した内容(あなたのコードや演習の文章)が
-> Google の製品改善に利用されます。秘密の情報をコードに書かないでください。
+> **Note**: On the Gemini API free tier, what you send (your code and the exercise text)
+> is used by Google to improve its products. Don't put secrets in your code.
 
-## 使い方
+## Usage
 
-1. **演習**: 左のサイドバーで問題を選ぶ → 右のエディタで書く → 「▶ 実行」
-   - 不合格なら、ケースごとの結果とエラーを確認。ヒントや「🤖 不合格の原因を考える」を使う
-   - 合格すると模範解答と「🤖 コードレビュー」が使えるようになる
-   - サイドバーの印: ✅ 合格 / ✏️ 挑戦中 / 🔁 復習の時期
-2. **ダッシュボード**: 「今日やること」の「解く」から、復習やおすすめの問題に移動できる
-3. **自由に試す**: 標準入力を指定してコードを実行。演習以外の実験用(結果は保存されない)
+1. **Exercises**: pick an exercise in the left sidebar → write code in the editor on the right → "▶ Run"
+   - If it fails, check the result and error for each case. Use the hints or "🤖 Explain the failure"
+   - Once you pass, the model solution and "🤖 Code review" become available
+   - Sidebar marks: ✅ passed / ✏️ in progress / 🔁 due for review
+2. **Dashboard**: use "Solve" under "To do today" to jump to reviews and recommended exercises
+3. **Playground**: run code with the standard input of your choice. For experiments outside the exercises (nothing is saved)
+4. **Switching language**: "日本語 / English" in the sidebar switches the UI text, the exercises (task, hints,
+   comments in the starter code) and the language of the AI's answers. Code you've started writing is kept when you switch
 
-進捗は `data/app.db` に保存され、アプリを再起動しても残ります。
-最初からやり直したいときは、アプリを止めてこのファイルを削除してください。
+Progress is saved in `data/app.db` and survives restarts.
+To start over, stop the app and delete this file.
 
-## アーキテクチャ
+## Architecture
 
 ```mermaid
 flowchart LR
-    User((学習者)) --> UI
+    User((Learner)) --> UI
 
-    subgraph UI["app/ (Streamlit UI・表示だけ)"]
-        Exercise[演習ページ]
-        Dashboard[ダッシュボード]
-        Playground[自由に試す]
+    subgraph UI["app/ (Streamlit UI, display only)"]
+        Exercise[Exercises page]
+        Dashboard[Dashboard]
+        Playground[Playground]
     end
 
-    subgraph Core["core/ (ドメインロジック・Streamlit非依存)"]
-        Loader[loader<br>教材の読み込み]
-        Grading[grading<br>採点]
-        Progress[progress<br>進捗の保存]
-        SRS[srs / recommend<br>復習・おすすめ]
+    subgraph Core["core/ (domain logic, no Streamlit)"]
+        Loader[loader<br>load exercises]
+        Grading[grading<br>grading]
+        Progress[progress<br>save progress]
+        SRS[srs / recommend<br>reviews & recommendations]
+        I18n[i18n<br>UI text]
     end
 
     UI --> Core
-    UI --> AI["ai/<br>Geminiクライアント<br>フィードバック生成"]
+    UI --> AI["ai/<br>Gemini client<br>feedback generation"]
     Loader --> Exercises[("exercises/<br>YAML + pytest")]
-    Grading --> Runner["runner/<br>サンドボックス実行"]
-    Runner --> Child["子プロセス<br>python -I<br>(タイムアウト・出力上限)"]
+    Grading --> Runner["runner/<br>sandboxed execution"]
+    Runner --> Child["child process<br>python -I<br>(timeout, output limit)"]
     Progress --> DB[("data/app.db<br>SQLite")]
-    AI --> Prompts[("prompts/<br>テンプレート")]
+    I18n --> Locales[("locales/<br>ja.yaml / en.yaml")]
+    AI --> Prompts[("prompts/ja, en/<br>templates")]
     AI --> Gemini[[Gemini API]]
 ```
 
-- **app/** は表示と入力の受け渡しだけ。ルール(模範解答をいつ見せるか、復習の時期など)は **core/** に置き、単体テストしている
-- **runner/** は学習者のコードを別プロセスで実行する。core から呼ばれるだけで、UI のことは知らない
-- **ai/** は API の失敗やキー未設定でも例外を外に出さず、画面に出せるメッセージを返す
-- AI へのプロンプトは **prompts/** のテキストファイルに分離している(コードにハードコードしない)
+- **app/** only handles display and passing input along. Rules (when to show the model solution, when reviews are due, etc.) live in **core/** and are unit-tested
+- **runner/** runs the learner's code in a separate process. It is only called from core and knows nothing about the UI
+- **ai/** never lets exceptions escape on API failures or a missing key; it returns a message that can be shown on screen
+- AI prompts are kept in text files under **prompts/ja/** and **prompts/en/** (never hard-coded)
+- UI text is collected in **locales/ja.yaml** and **locales/en.yaml**, and `core/i18n.py` looks it up by key
 
-### ディレクトリ構成
+### Directory layout
 
 ```
-app/            Streamlit UI(main.py とページ)
-core/           採点・進捗・復習・おすすめ・エクスポート
-runner/         学習者コードの隔離実行
-ai/             Gemini クライアントとフィードバック生成
-prompts/        AI プロンプトのテンプレート
-exercises/      教材 level{1-4}/<NNN_slug>/(exercise.yaml + test_solution.py)
-scripts/        verify_solutions.py(全演習の模範解答検証)
+app/            Streamlit UI (main.py and pages)
+core/           grading, progress, reviews, recommendations, export, i18n
+runner/         isolated execution of learner code
+ai/             Gemini client and feedback generation
+prompts/        AI prompt templates (ja/, en/)
+locales/        UI text (ja.yaml, en.yaml)
+exercises/      exercises level{1-4}/<NNN_slug>/ (exercise.yaml + test_solution.py)
+scripts/        verify_solutions.py (checks the model solutions of all exercises)
 tests/          pytest
-.claude/skills/ Claude Code 用 Skills(add-exercise / review-exercise / verify-app)
+.claude/skills/ Skills for Claude Code (add-exercise / review-exercise / verify-app)
 ```
 
-## 開発
+## Development
 
 ```bash
-uv run pytest                          # テスト
-uv run pytest --cov=core --cov=runner  # カバレッジ
+uv run pytest                          # tests
+uv run pytest --cov=core --cov=runner  # coverage
 uv run ruff check . && uv run ruff format .
 uv run mypy .                          # mypy --strict
-uv run python scripts/verify_solutions.py           # 全演習の模範解答を検証
-uv run python scripts/verify_solutions.py --list    # 演習の一覧
-uv run python scripts/verify_solutions.py --id <id> --try cheat.py  # 任意のコードで採点
+uv run python scripts/verify_solutions.py           # verify the model solutions of all exercises
+uv run python scripts/verify_solutions.py --list    # list exercises
+uv run python scripts/verify_solutions.py --id <id> --try cheat.py  # grade any code
 ```
 
-### 演習を追加する
+### Adding an exercise
 
-教材はコードではなくデータです。`exercises/level<N>/<NNN>_<slug>/` に次の2ファイルを置くと、
-再起動後に自動で読み込まれます。
+Exercises are data, not code. Put these two files in `exercises/level<N>/<NNN>_<slug>/`
+and they are loaded automatically after a restart.
 
-- `exercise.yaml`: お題・初期コード・ヒント(3段階)・模範解答・PHPとの違い など
-- `test_solution.py`: 採点用の pytest(学習者のコードは `solution.py` として import される)
+- `exercise.yaml`: task, starter code, hints (3 levels), model solution, PHP comparison, English translation (`en:`), etc.
+- `test_solution.py`: pytest tests for grading (the learner's code is imported as `solution.py`)
 
-`verify_solutions.py` で「模範解答が合格し、初期コードが不合格になる」ことを必ず確認してください。
-[Claude Code](https://claude.com/claude-code) を使う場合は、`add-exercise` Skill が作成から検証までを、
-`review-exercise` Skill が抜け穴のチェックを行います。
+Always use `verify_solutions.py` to confirm that "the model solution passes and the starter code fails".
+If you use [Claude Code](https://claude.com/claude-code), the `add-exercise` Skill handles everything from
+creation to verification, and the `review-exercise` Skill checks for loopholes.
 
-## 制約事項(必ずお読みください)
+## Limitations (please read)
 
-### ローカル専用です
+### Local use only
 
-このアプリは **自分のPCで、自分が書いたコードを動かす** ことだけを想定しています。
-**インターネットに公開してはいけません。** 公開すると、誰でもあなたのPC上で任意のコードを
-実行できてしまいます。公開する場合は、Docker / gVisor / Firecracker などのコンテナや仮想マシンによる
-本格的なサンドボックスが必要です。
+This app is designed only for **running code you wrote yourself, on your own computer**.
+**Do not expose it to the internet.** If you do, anyone can run arbitrary code on your computer.
+Exposing it would require a proper sandbox using containers or virtual machines such as
+Docker / gVisor / Firecracker.
 
-### 学習者コードの実行で対策していること
+### What is done to contain learner code
 
-- 別プロセス(`python -I`)で、毎回作り直す一時ディレクトリの中で実行する
-- タイムアウト(既定5秒)を超えたら、プロセスグループごと強制終了する
-- CPU時間・書き込めるファイルサイズを制限する(`resource.setrlimit`)
-- 標準出力・標準エラーは 64KB で打ち切る
-- 環境変数を引き継がない(APIキーなどが学習者コードから見えない)
+- It runs in a separate process (`python -I`) inside a temporary directory that is recreated every time
+- If it exceeds the timeout (5 seconds by default), the whole process group is killed
+- CPU time and the size of files it can write are limited (`resource.setrlimit`)
+- Standard output and standard error are cut off at 64KB
+- Environment variables are not passed on (API keys etc. are invisible to learner code)
 
-### 対策できていないこと
+### What is not contained
 
-- **ネットワークアクセス**: 学習者のコードは外部と通信できます
-- **ファイルシステム**: 一時ディレクトリの外のファイルも、あなたの権限で読み書き・削除できます
-  (例: `shutil.rmtree` でホームディレクトリを消すコードも実行できてしまいます)
-- **メモリ使用量**: macOS では `RLIMIT_AS` が効かないため、メモリを大量に使うコードは止められません
-- **プロセスの生成**: 子プロセスを作るコードは実行できます(タイムアウト時はグループごと終了します)
+- **Network access**: learner code can talk to the outside world
+- **File system**: files outside the temporary directory can be read, written and deleted with your permissions
+  (e.g. code that wipes your home directory with `shutil.rmtree` will run)
+- **Memory usage**: `RLIMIT_AS` has no effect on macOS, so code that uses huge amounts of memory can't be stopped
+- **Process creation**: code that spawns child processes can run (the whole group is killed on timeout)
 
-信頼できないコード(ネットで拾ったものなど)は貼り付けて実行しないでください。
+Don't paste and run code you don't trust (such as code found on the internet).
 
-### その他
+### Other notes
 
-- AI の回答は誤っていることがあります。最終的には実行して確かめてください
-- 復習の間隔は固定(1日・3日・7日)の簡易版です
+- The AI's answers can be wrong. Always run the code to check in the end
+- The review intervals are a simple fixed version (1, 3 and 7 days)
+- Some exercises check Japanese output strings (e.g. greetings), so the English version shows those strings as is
+
+## License
+
+[MIT License](LICENSE) © 2026 Shimpei Ohtani
